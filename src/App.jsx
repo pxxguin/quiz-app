@@ -2,68 +2,621 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   BookOpen, Brain, CheckCircle, XCircle, ChevronRight, 
   RefreshCw, Award, Lightbulb, Home, Search, Filter, 
-  Sparkles, Grid, Layers, Check, X, MessageCircle, ChevronDown
+  Sparkles, Grid, Layers, Check, X, MessageCircle, ChevronDown, 
+  Pause, Play, Moon, Sun, Trophy, User, Flame, TrendingUp, Star,
+  LogOut, Mail, Lock, LogIn, Coins, History
 } from 'lucide-react';
 
 // ----------------------------------------------------------------------
-// 🚀 [설정 가이드] 로컬 개발 vs 미리보기
+// 🚨 [필수 설정] 로컬 VS Code에서 사용 시 아래 주석을 해제하세요!
 // ----------------------------------------------------------------------
-// [1] 로컬(VS Code): 아래 주석을 해제하여 파일 로딩 활성화
-const quizModules = import.meta.glob('./quizzes/*.js', { eager: true });
-const LOADED_QUIZZES = Object.values(quizModules).map(module => module.default);
+// 1. 터미널 실행: npm install @supabase/supabase-js
+// 2. 아래 [A] 영역의 주석을 모두 해제하고, [B] 영역을 지우거나 주석 처리하세요.
+// ----------------------------------------------------------------------
 
-// ⚠️ 로컬에서 파일을 불러올 때는 여기를 LOADED_QUIZZES 로 변경하세요.
-const INITIAL_QUIZZES = LOADED_QUIZZES;
+// --- [A] REAL SUPABASE (로컬용: 실제 DB 사용 시 주석 해제) ---
+
+import { createClient } from '@supabase/supabase-js';
+const supabaseUrl = 'https://sawcthxuizskcufrgopa.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhd2N0aHh1aXpza2N1ZnJnb3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2NDI5NTAsImV4cCI6MjA3OTIxODk1MH0.kjcK-N6nV2XP_gk0F1cGqrfe3Cw-r85MU1PFODws5sI';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// --- [데이터] 정적 퀴즈 데이터 ---
+const STATIC_QUIZ_DATA = [
+  {
+    id: 'quiz-math-001',
+    title: '수학 및 과학 기초 (수식 테스트)',
+    description: '이미지와 LaTeX 수식이 포함된 문제들을 테스트합니다.',
+    author: 'ScienceLab',
+    category: 'Math',
+    points: 100,
+    createdAt: '2024-05-26',
+    questions: [
+      {
+        id: 101,
+        image: 'https://i.imgur.com/c5wW32w.png', 
+        text: '다음 그림에서 밑변이 $a=3$, 높이가 $b=4$일 때, 빗변 $c$의 값은?',
+        options: ['$c = 4$', '$c = 5$', '$c = 6$', '$c = \\sqrt{20}$'],
+        answer: 1,
+        shortExplanation: '피타고라스의 정리를 이용하세요.',
+        detailedExplanation: '피타고라스의 정리 $a^2 + b^2 = c^2$ 에 대입하면, $3^2 + 4^2 = 9 + 16 = 25$ 입니다. 따라서 $c^2 = 25$ 이므로 $c=5$ 입니다.',
+      }
+    ]
+  },
+  {
+    id: 'quiz-001',
+    title: '인공지능 기초 상식',
+    description: 'AI, 머신러닝, 딥러닝의 기본 개념을 잘 이해하고 있는지 테스트해보세요.',
+    author: '관리자',
+    category: 'AI', 
+    points: 50,
+    createdAt: '2024-05-25',
+    questions: [
+      {
+        id: 101,
+        text: '다음 중 인공지능 분야의 포함 관계가 올바른 것은?',
+        options: ['딥러닝 > 머신러닝 > 인공지능', '인공지능 > 머신러닝 > 딥러닝', '머신러닝 > 인공지능 > 딥러닝', '모두 별개의 개념이다'],
+        answer: 1,
+        shortExplanation: '가장 큰 개념이 무엇인지 생각해보세요. (AI > ML > DL)',
+        detailedExplanation: '인공지능(AI)이 가장 포괄적인 개념이며, 그 안에 데이터를 학습하는 머신러닝(ML)이 포함되고, 머신러닝 안에 인공신경망을 사용하는 딥러닝(DL)이 포함됩니다.',
+      }
+    ]
+  },
+  {
+    id: 'quiz-002',
+    title: '웹 개발 기초 (React)',
+    description: '리액트의 기본 동작 원리와 훅(Hook)에 대한 퀴즈입니다.',
+    author: 'DevTeam',
+    category: 'Web',
+    points: 50,
+    createdAt: '2024-05-21',
+    questions: [
+      {
+        id: 201,
+        text: 'React 컴포넌트에서 상태(State)를 관리하기 위해 사용하는 Hook은?',
+        options: ['useEffect', 'useState', 'useContext', 'useReducer'],
+        answer: 1,
+        shortExplanation: '상태(State)를 사용(Use)한다는 단어를 떠올려보세요.',
+        detailedExplanation: 'useState는 함수형 컴포넌트에서 가변적인 상태를 관리할 수 있게 해주는 가장 기본적인 Hook입니다.',
+      }
+    ]
+  },
+  {
+    id: 'quiz-003',
+    title: '컴퓨터 구조 (CS)',
+    description: 'CPU, 메모리, 운영체제 등 컴퓨터 공학 기초 지식을 다룹니다.',
+    author: 'Prof.K',
+    category: 'CS',
+    points: 80,
+    createdAt: '2024-05-10',
+    questions: [
+      {
+        id: 301,
+        text: 'CPU 내부에서 연산을 담당하는 장치는?',
+        options: ['ALU', 'CU', 'Register', 'Cache'],
+        answer: 0,
+        shortExplanation: 'Arithmetic Logic Unit의 약자입니다.',
+        detailedExplanation: 'ALU(Arithmetic Logic Unit, 산술논리장치)는 CPU의 핵심 부품 중 하나로, 덧셈/뺄셈 같은 산술 연산과 AND/OR 같은 논리 연산을 실제로 수행하는 장치입니다.',
+      }
+    ]
+  },
+  {
+    id: 'quiz-004',
+    title: '네트워크 기초 (Network)',
+    description: 'IP, TCP/UDP, HTTP 등 네트워크 통신에 대한 기본 퀴즈입니다.',
+    author: 'NetMaster',
+    category: 'Network',
+    points: 70,
+    createdAt: '2024-05-05',
+    questions: [
+      {
+        id: 401,
+        text: '웹 브라우저와 서버 간의 통신에 주로 사용되는 프로토콜은?',
+        options: ['FTP', 'SMTP', 'HTTP', 'SSH'],
+        answer: 2,
+        shortExplanation: 'HyperText Transfer Protocol입니다.',
+        detailedExplanation: 'HTTP(HyperText Transfer Protocol)는 월드 와이드 웹(WWW) 상에서 정보를 주고받을 때 사용하는 프로토콜입니다.',
+      }
+    ]
+  }
+];
+
+const INITIAL_QUIZZES = STATIC_QUIZ_DATA;
 
 // ----------------------------------------------------------------------
-// ✨ [Helper] 텍스트 내의 LaTeX 수식 렌더링 컴포넌트
+// 🏆 [Logic] 티어 계산 시스템 (디자인 수정됨: 명확한 색상 지정)
 // ----------------------------------------------------------------------
+const calculateTier = (xp) => {
+  let level = 1;
+  let tier = 'Bronze';
+  let styles = {
+    bg: 'bg-amber-100',
+    text: 'text-amber-800',
+    border: 'border-amber-300',
+    badge: 'bg-amber-100 text-amber-800 border-amber-200'
+  };
+  let nextLevelXp = 100;
+
+  if (xp < 500) {
+    // Bronze (Lv 1~4)
+    level = Math.floor(xp / 100) + 1;
+    tier = 'Bronze';
+    styles = {
+      bg: 'bg-orange-100',
+      text: 'text-orange-800', // 글자색 진하게 수정
+      border: 'border-orange-300',
+      badge: 'bg-orange-100 text-orange-800 border-orange-200'
+    };
+    nextLevelXp = level * 100;
+  } else if (xp < 1250) {
+    // Silver (Lv 5~9)
+    level = 5 + Math.floor((xp - 500) / 150);
+    tier = 'Silver';
+    styles = {
+      bg: 'bg-slate-100',
+      text: 'text-slate-700',
+      border: 'border-slate-300',
+      badge: 'bg-slate-100 text-slate-700 border-slate-200'
+    };
+    nextLevelXp = 500 + (level - 4) * 150;
+  } else {
+    // Gold (Lv 10~)
+    level = 10 + Math.floor((xp - 1250) / 200);
+    tier = 'Gold';
+    styles = {
+      bg: 'bg-yellow-100',
+      text: 'text-yellow-800',
+      border: 'border-yellow-300',
+      badge: 'bg-yellow-100 text-yellow-800 border-yellow-200'
+    };
+    nextLevelXp = 1250 + (level - 9) * 200;
+  }
+
+  return { level, tier, styles, nextLevelXp };
+};
+
+// ----------------------------------------------------------------------
+// 🎨 Helper Components
+// ----------------------------------------------------------------------
+const getCategoryTheme = (category) => {
+  const themes = [
+    { gradient: 'from-blue-600 to-indigo-700', badgeBg: 'bg-blue-50 dark:bg-blue-900/30', badgeText: 'text-blue-700 dark:text-blue-300', hoverBorder: 'hover:border-blue-300 dark:hover:border-blue-700', iconHover: 'group-hover:bg-blue-600' },
+    { gradient: 'from-emerald-500 to-teal-700', badgeBg: 'bg-emerald-50 dark:bg-emerald-900/30', badgeText: 'text-emerald-700 dark:text-emerald-300', hoverBorder: 'hover:border-emerald-300 dark:hover:border-emerald-700', iconHover: 'group-hover:bg-emerald-600' },
+    { gradient: 'from-orange-500 to-amber-600', badgeBg: 'bg-orange-50 dark:bg-orange-900/30', badgeText: 'text-orange-700 dark:text-orange-300', hoverBorder: 'hover:border-orange-300 dark:hover:border-orange-700', iconHover: 'group-hover:bg-orange-600' },
+    { gradient: 'from-rose-500 to-pink-600', badgeBg: 'bg-rose-50 dark:bg-rose-900/30', badgeText: 'text-rose-700 dark:text-rose-300', hoverBorder: 'hover:border-rose-300 dark:hover:border-rose-700', iconHover: 'group-hover:bg-rose-600' },
+    { gradient: 'from-violet-600 to-purple-700', badgeBg: 'bg-violet-50 dark:bg-violet-900/30', badgeText: 'text-violet-700 dark:text-violet-300', hoverBorder: 'hover:border-violet-300 dark:hover:border-violet-700', iconHover: 'group-hover:bg-violet-600' }
+  ];
+  if (!category) return themes[0];
+  let hash = 0;
+  for (let i = 0; i < category.length; i++) hash = category.charCodeAt(i) + ((hash << 5) - hash);
+  return themes[Math.abs(hash) % themes.length];
+};
+
 const KatexRenderer = ({ formula }) => {
   const containerRef = useRef(null);
-
   useEffect(() => {
     if (window.katex && containerRef.current) {
       try {
-        window.katex.render(formula, containerRef.current, {
-          throwOnError: false,
-          displayMode: false 
-        });
-      } catch (e) {
-        console.error("KaTeX render error:", e);
-        containerRef.current.innerText = formula;
-      }
+        window.katex.render(formula, containerRef.current, { throwOnError: false, displayMode: false });
+      } catch (e) { containerRef.current.innerText = formula; }
     }
   }, [formula]);
-
-  if (!window.katex && typeof window !== 'undefined') {
-    return <span>${formula}$</span>;
-  }
+  if (!window.katex && typeof window !== 'undefined') return <span>${formula}$</span>;
   return <span ref={containerRef} />;
 };
 
 const RenderContent = ({ content }) => {
   if (!content) return null;
   if (typeof content !== 'string') return <span>{content}</span>;
-  
   const parts = content.split('$');
+  return (<span>{parts.map((part, index) => (index % 2 === 0 ? <span key={index}>{part}</span> : <KatexRenderer key={index} formula={part} />))}</span>);
+};
+
+const Confetti = () => {
+  const [particles, setParticles] = useState([]);
+  useEffect(() => {
+    const colors = ['#FFC700', '#FF0000', '#2E3192', '#41BBC7', '#73ff00'];
+    const newParticles = Array.from({ length: 50 }).map((_, i) => ({
+      id: i, x: Math.random() * 100, y: Math.random() * 100 - 20,
+      color: colors[Math.floor(Math.random() * colors.length)], delay: Math.random() * 2, size: Math.random() * 10 + 5, rotation: Math.random() * 360
+    }));
+    setParticles(newParticles);
+  }, []);
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
+      {particles.map((p) => (
+        <div key={p.id} className="absolute animate-confetti-fall" style={{ left: `${p.x}%`, top: `-10%`, width: `${p.size}px`, height: `${p.size}px`, backgroundColor: p.color, animationDelay: `${p.delay}s`, transform: `rotate(${p.rotation}deg)` }} />
+      ))}
+      <style>{`@keyframes confetti-fall { 0% { top: -10%; transform: translateX(0) rotate(0deg); opacity: 1; } 100% { top: 110%; transform: translateX(${Math.random() * 40 - 20}vw) rotate(720deg); opacity: 0; } } .animate-confetti-fall { animation: confetti-fall 4s linear forwards; }`}</style>
+    </div>
+  );
+};
+
+const AnimatedCounter = ({ end }) => {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let startTime; const duration = 1500; const startValue = 0;
+    const step = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setCount(Math.floor(startValue + (1 - Math.pow(1 - progress, 3)) * (end - startValue)));
+      if (progress < 1) window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+  }, [end]);
+  return <span>{count}</span>;
+};
+
+// ----------------------------------------------------------------------
+// 🔑 인증 화면
+// ----------------------------------------------------------------------
+const AuthView = ({ onLoginSuccess }) => {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    if (!supabase) {
+      alert("로컬에서 실행하려면 App.jsx 상단의 주석을 해제하세요.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (isSignUp) {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) {
+            if (error.message.includes("already registered")) {
+                alert("이미 가입된 이메일입니다. 로그인해주세요.");
+                setIsSignUp(false);
+                setLoading(false);
+                return;
+            }
+            throw error;
+        }
+        
+        if (data?.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([{ 
+              id: data.user.id, 
+              email: email, 
+              total_xp: 0, 
+              total_solved: 0, 
+              streak: 1, 
+              last_login_at: new Date().toISOString() 
+            }]);
+            
+          if (profileError) console.error("Profile creation error:", profileError);
+        }
+
+        alert("가입 성공! 로그인합니다.");
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (!signInError && onLoginSuccess) onLoginSuccess();
+
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        if (onLoginSuccess) onLoginSuccess();
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto mt-20 bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 animate-fade-in">
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+          <User className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {isSignUp ? '회원가입' : '로그인'}
+        </h2>
+      </div>
+      <form onSubmit={handleAuth} className="space-y-4">
+        <div>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" placeholder="example@email.com" />
+          </div>
+        </div>
+        <div>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" placeholder="••••••••" />
+          </div>
+        </div>
+        {error && ( <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg flex items-center gap-2"><XCircle className="w-4 h-4 flex-shrink-0" /> {error}</div>)}
+        <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 shadow-lg flex justify-center items-center gap-2 transition-all disabled:opacity-50">
+          {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : (isSignUp ? '가입하기' : '로그인하기')}
+        </button>
+      </form>
+      <div className="mt-6 text-center">
+        <button onClick={() => { setIsSignUp(!isSignUp); setError(null); }} className="text-sm text-gray-500 hover:text-blue-600 font-medium transition-colors">
+          {isSignUp ? '이미 계정이 있으신가요? 로그인' : '계정이 없으신가요? 회원가입'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ----------------------------------------------------------------------
+// 🌟 사이드바 (왼쪽: 내 정보)
+// ----------------------------------------------------------------------
+const SidebarLeft = ({ user, userProfile, onLoginClick, onLogoutClick, onViewSolved }) => {
+  if (!user) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4"><User className="w-8 h-8 text-gray-400" /></div>
+        <h3 className="font-bold text-gray-900 dark:text-white mb-2">로그인이 필요해요</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">학습 기록을 저장하고 랭킹에 도전하세요!</p>
+        <button onClick={onLoginClick} className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 flex items-center justify-center gap-2 transition-all"><LogIn className="w-4 h-4" /> 로그인 / 가입</button>
+      </div>
+    );
+  }
+
+  const xp = userProfile?.total_xp || 0;
+  const { level, tier, styles, nextLevelXp } = calculateTier(xp);
+  
+  // 현재 레벨 진행률
+  let prevLevelXp = 0;
+  if (tier === 'Bronze') prevLevelXp = (level - 1) * 100;
+  else if (tier === 'Silver') prevLevelXp = 500 + (level - 5) * 150;
+  else prevLevelXp = 1250 + (level - 10) * 200;
+  
+  let progress = 0;
+  const xpInCurrentLevel = xp - prevLevelXp; 
+  const xpNeededForNext = nextLevelXp - prevLevelXp; 
+  if (xpNeededForNext > 0) {
+      progress = (xpInCurrentLevel / xpNeededForNext) * 100;
+  }
+  progress = Math.min(Math.max(progress, 0), 100);
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-4 mb-6">
+          {/* 🎨 티어 아바타 (글씨 색상 수정됨) */}
+          <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center text-2xl font-black shadow-lg ${styles.bg} ${styles.border} ${styles.text}`}>
+             {tier[0]}
+          </div>
+          <div className="overflow-hidden">
+            <h3 className="font-bold text-gray-900 dark:text-white text-lg truncate">{user.email.split('@')[0]}</h3>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${styles.badge}`}>
+              {tier} Tier
+            </span>
+          </div>
+        </div>
+        
+        <div className="mb-2 flex justify-between text-xs font-bold text-gray-600 dark:text-gray-300">
+          <span>Lv. {level}</span>
+          <span>{xp} / {nextLevelXp} XP</span>
+        </div>
+        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2.5 mb-6">
+          <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl text-center">
+            <div className="text-orange-500 mb-1 flex justify-center"><Flame className="w-5 h-5" /></div>
+            <div className="text-xl font-black text-gray-900 dark:text-white">{userProfile?.streak || 0}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">연속 학습</div>
+          </div>
+          {/* 🚀 푼 퀴즈 클릭 시 필터링 연동 */}
+          <div 
+            onClick={() => onViewSolved()}
+            className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl text-center cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+          >
+            <div className="text-green-500 mb-1 flex justify-center"><BookOpen className="w-5 h-5 group-hover:scale-110 transition-transform" /></div>
+            <div className="text-xl font-black text-gray-900 dark:text-white">{userProfile?.total_solved || 0}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">푼 퀴즈</div>
+          </div>
+        </div>
+
+        <button onClick={onLogoutClick} className="w-full py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center justify-center gap-1"><LogOut className="w-4 h-4" /> 로그아웃</button>
+      </div>
+    </div>
+  );
+};
+
+// ----------------------------------------------------------------------
+// 🌟 사이드바 (오른쪽: 랭킹)
+// ----------------------------------------------------------------------
+const SidebarRight = ({ leaderboard }) => {
+  const tags = ['#React', '#Javascript', '#AI', '#Python', '#CS', '#Network', '#Web', '#Algorithm'];
   
   return (
-    <span>
-      {parts.map((part, index) => {
-        if (index % 2 === 0) {
-          return <span key={index}>{part}</span>;
-        }
-        return <KatexRenderer key={index} formula={part} />;
-      })}
-    </span>
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Trophy className="w-5 h-5 text-yellow-500" /> 명예의 전당 (TOP 5)</h3>
+        <div className="space-y-4">
+          {!leaderboard || leaderboard.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">아직 랭커가 없습니다.</p>
+          ) : (
+            leaderboard.map((user, idx) => {
+              const { tier, styles } = calculateTier(user.total_xp || 0);
+              return (
+                <div key={idx} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${idx === 0 ? 'bg-yellow-500' : idx === 1 ? 'bg-gray-400' : idx === 2 ? 'bg-orange-400' : 'bg-blue-500'}`}>
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 truncate w-24">
+                        {user.email ? user.email.split('@')[0] : 'Unknown'}
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${styles.badge}`}>{tier}</span>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{user.total_xp} XP</span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Star className="w-5 h-5 text-orange-500" /> 인기 키워드</h3>
+        <div className="flex flex-wrap gap-2">
+          {tags.map(tag => (
+            <span key={tag} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium rounded-full hover:bg-blue-100 dark:hover:bg-blue-900 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors">{tag}</span>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 };
 
 
 export default function QuizPlatform() {
-  const [view, setView] = useState('home'); 
+  const [view, setView] = useState('home');
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [quizzes] = useState(INITIAL_QUIZZES);
+  
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null); 
+  const [leaderboard, setLeaderboard] = useState([]); 
+  const [solvedQuizIds, setSolvedQuizIds] = useState([]);
+
+  // 🚀 [NEW] 카테고리 상태를 상위로 이동 (사이드바 클릭 제어용)
+  const [currentCategory, setCurrentCategory] = useState('All');
+
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('quizAppTheme');
+      if (saved) return saved === 'dark';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('quizAppTheme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('quizAppTheme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  const fetchData = async (userId, userEmail) => {
+    if (!userId || !supabase) return;
+
+    try {
+      let { data: profileData } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      
+      if (!profileData) {
+        const { error: insertError } = await supabase.from('profiles').insert([{ 
+          id: userId, 
+          email: userEmail, 
+          total_xp: 0, 
+          total_solved: 0, 
+          streak: 1, 
+          last_login_at: new Date().toISOString() 
+        }]);
+        
+        if (!insertError) {
+           const { data: newProfile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+           profileData = newProfile;
+        }
+      }
+
+      if (profileData) {
+          const lastLogin = profileData.last_login_at ? new Date(profileData.last_login_at) : new Date();
+          const today = new Date();
+          const lastDate = new Date(lastLogin.getFullYear(), lastLogin.getMonth(), lastLogin.getDate());
+          const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const diffDays = Math.ceil(Math.abs(todayDate - lastDate) / (1000 * 60 * 60 * 24));
+
+          let newStreak = profileData.streak;
+          let needsUpdate = false;
+
+          if (diffDays === 1) { newStreak += 1; needsUpdate = true; } 
+          else if (diffDays > 1) { newStreak = 1; needsUpdate = true; }
+          else if (!profileData.last_login_at) { needsUpdate = true; }
+
+          if (needsUpdate) {
+              await supabase.from('profiles').update({ streak: newStreak, last_login_at: new Date().toISOString() }).eq('id', userId);
+              profileData.streak = newStreak; 
+          }
+          setUserProfile(profileData);
+      }
+
+      const { data: solvedData } = await supabase.from('solved_quizzes').select('quiz_id').eq('user_id', userId);
+      if (solvedData) setSolvedQuizIds(solvedData.map(item => item.quiz_id));
+
+      const { data: rankData } = await supabase.from('profiles').select('email, total_xp').order('total_xp', { ascending: false }).limit(5);
+      if (rankData) setLeaderboard(rankData);
+
+    } catch (error) {
+      console.error("Fetch Error:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        fetchData(session.user.id, session.user.email);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        fetchData(session.user.id, session.user.email);
+      } else {
+        setUser(null);
+        setUserProfile(null);
+        setSolvedQuizIds([]); 
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleQuizComplete = async (quizId, earnedPoints) => {
+    if (!user || !supabase) return;
+
+    if (solvedQuizIds.includes(quizId)) return;
+    
+    const { error: insertError } = await supabase
+      .from('solved_quizzes')
+      .insert({ user_id: user.id, quiz_id: quizId, points_earned: earnedPoints });
+
+    if (!insertError) {
+      const newXp = (userProfile?.total_xp || 0) + earnedPoints;
+      const newTotal = (userProfile?.total_solved || 0) + 1;
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ total_xp: newXp, total_solved: newTotal })
+        .eq('id', user.id);
+      
+      if (!updateError) {
+        setUserProfile(prev => ({ ...prev, total_xp: newXp, total_solved: newTotal }));
+        setSolvedQuizIds(prev => [...prev, quizId]);
+        fetchData(user.id); 
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    if (supabase) await supabase.auth.signOut();
+    setView('home');
+  };
 
   const goHome = () => {
     setView('home');
@@ -78,367 +631,207 @@ export default function QuizPlatform() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300">
+      <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-20 shadow-sm transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div onClick={goHome} className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="bg-blue-600 text-white p-1.5 rounded-lg">
               <Brain className="w-6 h-6" />
             </div>
-            <span className="text-xl font-bold text-gray-900">QuizMaster</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">QuizMaster</span>
           </div>
+          
           <div className="flex items-center gap-4">
-            {view !== 'home' && (
-              <button onClick={goHome} className="flex items-center gap-1 text-gray-500 hover:text-blue-600 font-medium transition-colors">
-                <Home className="w-4 h-4" />
-                <span className="hidden sm:inline">홈으로</span>
-              </button>
-            )}
+            <button onClick={toggleTheme} className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-yellow-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
+              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+            {!user && view !== 'auth' && (<button onClick={() => setView('auth')} className="lg:hidden bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold">로그인</button>)}
+            {view !== 'home' && (<button onClick={goHome} className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"><Home className="w-4 h-4" /><span className="hidden sm:inline">홈으로</span></button>)}
           </div>
         </div>
       </nav>
 
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        {view === 'home' && <HomeView quizzes={quizzes} onSelect={startSolve} />}
-        {view === 'solve' && selectedQuiz && <SolverView quiz={selectedQuiz} onBack={goHome} />}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {view === 'auth' ? (
+          <AuthView onLoginSuccess={goHome} />
+        ) : view === 'home' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <aside className="hidden lg:block lg:col-span-3">
+              <div className="sticky top-24">
+                <SidebarLeft 
+                  user={user} 
+                  userProfile={userProfile}
+                  onLoginClick={() => setView('auth')} 
+                  onLogoutClick={handleLogout}
+                  onViewSolved={() => setCurrentCategory('Solved')} // 🚀 푼 문제 보기 트리거
+                />
+              </div>
+            </aside>
+            <section className="lg:col-span-6">
+              <HomeView 
+                quizzes={quizzes} 
+                onSelect={startSolve} 
+                solvedQuizIds={solvedQuizIds}
+                // 🚀 상태 전달
+                selectedCategory={currentCategory}
+                setSelectedCategory={setCurrentCategory}
+              />
+            </section>
+            <aside className="hidden lg:block lg:col-span-3">
+              <div className="sticky top-24"><SidebarRight leaderboard={leaderboard} /></div>
+            </aside>
+          </div>
+        ) : (
+          <div className="max-w-3xl mx-auto">
+            {view === 'solve' && selectedQuiz && <SolverView quiz={selectedQuiz} onBack={goHome} onComplete={handleQuizComplete} />}
+          </div>
+        )}
       </main>
     </div>
   );
 }
 
-// ----------------------------------------------------------------------
-// VIEW 1: Home
-// ----------------------------------------------------------------------
-function HomeView({ quizzes, onSelect }) {
-  const [selectedCategory, setSelectedCategory] = useState('All');
+// --- HomeView (수정됨: 추천 섹션 복구, 푼 문제 필터 추가) ---
+function HomeView({ quizzes, onSelect, solvedQuizIds = [], selectedCategory, setSelectedCategory }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const slideIntervalRef = useRef(null);
 
-  const categories = useMemo(() => {
-    const cats = quizzes.map(q => q.category || '기타');
-    return ['All', ...new Set(cats)];
+  // 카테고리 목록 + 'Solved' 필터 추가
+  const categories = useMemo(() => { 
+    const cats = quizzes.map(q => q.category || '기타'); 
+    return ['All', ...new Set(cats)]; 
   }, [quizzes]);
 
-  const recentQuizzes = useMemo(() => {
-    return [...quizzes].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 2);
-  }, [quizzes]);
+  const recentQuizzes = useMemo(() => { return [...quizzes].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 5); }, [quizzes]);
+  const carouselItems = useMemo(() => { if (recentQuizzes.length <= 2) return recentQuizzes; return [...recentQuizzes, ...recentQuizzes.slice(0, 2)]; }, [recentQuizzes]);
 
-  const filteredQuizzes = useMemo(() => {
-    return quizzes.filter(q => {
-      const matchCategory = selectedCategory === 'All' || (q.category || '기타') === selectedCategory;
-      const lowerTerm = searchTerm.toLowerCase();
-      const matchSearch = q.title.toLowerCase().includes(lowerTerm) ||
-                          q.description.toLowerCase().includes(lowerTerm) ||
-                          (q.category || '').toLowerCase().includes(lowerTerm);
-      return matchCategory && matchSearch;
-    });
-  }, [quizzes, selectedCategory, searchTerm]);
+  useEffect(() => { 
+    if (isPaused || recentQuizzes.length <= 2) return; 
+    const startInterval = () => { slideIntervalRef.current = setInterval(() => { setCurrentSlide(prev => { const next = prev + 1; return next >= recentQuizzes.length ? 0 : next; }); }, 3000); }; 
+    startInterval(); 
+    return () => { if (slideIntervalRef.current) clearInterval(slideIntervalRef.current); }; 
+  }, [isPaused, recentQuizzes.length]);
 
+  // 🚀 필터링 로직 (푼 문제 포함)
+  const filteredQuizzes = useMemo(() => { 
+    return quizzes.filter(q => { 
+      // 1. 카테고리 & 푼 문제 필터
+      let matchCategory = true;
+      if (selectedCategory === 'Solved') {
+         matchCategory = solvedQuizIds.includes(q.id);
+      } else if (selectedCategory !== 'All') {
+         matchCategory = (q.category || '기타') === selectedCategory;
+      }
+
+      // 2. 검색어 필터
+      const lowerTerm = searchTerm.toLowerCase(); 
+      const matchSearch = q.title.toLowerCase().includes(lowerTerm) || q.description.toLowerCase().includes(lowerTerm) || (q.category || '').toLowerCase().includes(lowerTerm); 
+      return matchCategory && matchSearch; 
+    }); 
+  }, [quizzes, selectedCategory, searchTerm, solvedQuizIds]);
+  
   return (
-    <div className="animate-fade-in space-y-10">
+    <div className="animate-fade-in space-y-8">
+      {/* 🚀 추천 문제 섹션 복구 (필터링 없을 때만 표시) */}
       {!searchTerm && selectedCategory === 'All' && recentQuizzes.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-yellow-500" />
-            <h2 className="text-xl font-bold text-gray-900">따끈따끈한 최신 문제 🔥</h2>
+        <section onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} className="relative">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2"><Sparkles className="w-5 h-5 text-yellow-500" /><h2 className="text-xl font-bold text-gray-900 dark:text-white">오늘의 추천 문제</h2></div>
+            {recentQuizzes.length > 2 && (<div className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">{isPaused ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}{isPaused ? '일시정지' : '자동재생'}</div>)}
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {recentQuizzes.map((quiz, idx) => (
-              <div key={`recent-${quiz.id || idx}`} onClick={() => onSelect(quiz)} className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 text-white cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all relative overflow-hidden">
-                <div className="relative z-10">
-                  <span className="inline-block bg-white/20 backdrop-blur-sm text-xs font-bold px-2 py-1 rounded-lg mb-3 text-blue-50">{quiz.category || 'New'}</span>
-                  <h3 className="text-xl font-bold mb-2 line-clamp-1">{quiz.title}</h3>
-                  <p className="text-blue-100 text-sm line-clamp-2 mb-4">{quiz.description}</p>
-                  <div className="flex items-center text-xs text-blue-200 font-medium">
-                    <span>{quiz.createdAt} 등록</span>
-                    <span className="mx-2">•</span>
-                    <span>{quiz.author}</span>
-                  </div>
-                </div>
-                <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
+          <div className="overflow-hidden -mx-2 px-2 py-2"><div className="flex transition-transform duration-700 ease-in-out" style={{ transform: `translateX(-${currentSlide * (window.innerWidth < 640 ? 100 : 50)}%)` }}>
+              {carouselItems.map((quiz, idx) => { const theme = getCategoryTheme(quiz.category); return (
+                  <div key={`${quiz.id}-carousel-${idx}`} className="w-full sm:w-1/2 flex-shrink-0 px-2"><div onClick={() => onSelect(quiz)} className={`bg-gradient-to-br ${theme.gradient} rounded-2xl p-6 text-white cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all relative overflow-hidden h-full flex flex-col justify-between border border-transparent dark:border-white/10`}><div className="relative z-10"><span className="inline-block bg-white/20 backdrop-blur-sm text-xs font-bold px-2 py-1 rounded-lg mb-3 text-white">{quiz.category || 'New'}</span><h3 className="text-xl font-bold mb-2 line-clamp-1">{quiz.title}</h3><p className="text-white/90 text-sm line-clamp-2 mb-4">{quiz.description}</p></div><div className="relative z-10 flex items-center text-xs text-white/80 font-medium mt-2"><span>{quiz.createdAt} 등록</span><span className="mx-2">•</span><span>{quiz.author}</span></div><div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div></div></div>
+                );})}</div></div></section>)}
+      
       <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Layers className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-bold text-gray-900">카테고리 및 퀴즈 검색</h2>
+        <div className="flex items-center gap-2 mb-4"><Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" /><h2 className="text-xl font-bold text-gray-900 dark:text-white">퀴즈 탐색</h2></div>
+        <div className="relative mb-6"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="제목, 카테고리, 내용을 검색해보세요..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none transition-all" /></div>
+        
+        {/* 카테고리 필터 + 푼 문제 보기 버튼 */}
+        <div className="flex flex-wrap gap-2 mb-6 items-center">
+          {categories.map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${selectedCategory === cat ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md transform scale-105' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>{cat === 'All' ? '전체 보기' : cat}</button>))}
+          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1"></div>
+          <button 
+            onClick={() => setSelectedCategory('Solved')} 
+            className={`px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-1 ${selectedCategory === 'Solved' ? 'bg-green-600 text-white shadow-md' : 'bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-900 hover:bg-green-50 dark:hover:bg-green-900/20'}`}
+          >
+            <CheckCircle className="w-4 h-4" /> 내가 푼 문제
+          </button>
         </div>
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input type="text" placeholder="제목, 카테고리, 내용을 검색해보세요..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-        </div>
-        <div className="flex flex-wrap gap-2 mb-6">
-          {categories.map(cat => (
-            <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${selectedCategory === cat ? 'bg-gray-900 text-white shadow-md transform scale-105' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
-              {cat === 'All' ? '전체 보기' : cat}
-            </button>
-          ))}
-        </div>
-        {filteredQuizzes.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3"><Grid className="w-6 h-6 text-gray-400" /></div>
-            <p className="text-gray-500 font-medium">{searchTerm ? '검색 결과가 없습니다.' : '등록된 퀴즈가 없습니다.'}</p>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {filteredQuizzes.map((quiz, idx) => (
-              <div key={quiz.id || idx} onClick={() => onSelect(quiz)} className="group bg-white p-5 rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all flex items-center justify-between">
-                <div className="flex-1 min-w-0 pr-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{quiz.category || '기타'}</span>
-                    <span className="text-xs text-gray-400">•</span>
-                    <span className="text-xs text-gray-400">{quiz.createdAt}</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{quiz.title}</h3>
-                  <p className="text-sm text-gray-500 truncate">{quiz.description}</p>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0"><ChevronRight className="w-5 h-5" /></div>
+
+        {filteredQuizzes.length === 0 ? (<div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700"><div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3"><Grid className="w-6 h-6 text-gray-400" /></div><p className="text-gray-500 dark:text-gray-400 font-medium">{selectedCategory === 'Solved' ? '아직 푼 문제가 없습니다.' : '검색 결과가 없습니다.'}</p></div>) : (<div className="grid gap-4">{filteredQuizzes.map((quiz, idx) => { 
+          const theme = getCategoryTheme(quiz.category); 
+          const isSolved = solvedQuizIds.includes(quiz.id);
+          return (
+            <div key={quiz.id || idx} onClick={() => onSelect(quiz)} className={`group bg-white dark:bg-gray-800 p-5 rounded-2xl border ${theme.hoverBorder} hover:shadow-md cursor-pointer transition-all flex items-center justify-between relative overflow-hidden ${isSolved ? 'border-green-200 dark:border-green-900/30 bg-green-50/30 dark:bg-green-900/10' : 'border-gray-200 dark:border-gray-700'}`}>
+              <div className="flex-1 min-w-0 pr-4 z-10">
+                <div className="flex items-center gap-2 mb-1"><span className={`text-xs font-bold ${theme.badgeText} ${theme.badgeBg} px-2 py-0.5 rounded-md`}>{quiz.category || '기타'}</span><span className="flex items-center gap-1 text-xs font-bold text-yellow-600 dark:text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-md"><Coins className="w-3 h-3" /> {quiz.points || 0} XP</span><span className="text-xs text-gray-400 dark:text-gray-500">•</span><span className="text-xs text-gray-400 dark:text-gray-500">{quiz.createdAt}</span></div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{quiz.title}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{quiz.description}</p>
               </div>
-            ))}
-          </div>
-        )}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors flex-shrink-0 z-10 ${isSolved ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' : `bg-gray-100 dark:bg-gray-700 ${theme.iconHover} group-hover:text-white text-gray-600 dark:text-gray-400`}`}>{isSolved ? <Check className="w-6 h-6" /> : <ChevronRight className="w-5 h-5" />}</div>
+              {isSolved && (<div className="absolute -right-2 -bottom-4 opacity-10 pointer-events-none"><Award className="w-24 h-24 text-green-600" /></div>)}
+            </div>
+          );
+        })}</div>)}
       </section>
     </div>
   );
 }
 
-// ----------------------------------------------------------------------
-// VIEW 2: Solver (랜덤 셔플 기능 추가됨)
-// ----------------------------------------------------------------------
-function SolverView({ quiz, onBack }) {
-  // 1. 문제 섞기 함수 (Fisher-Yates Shuffle)
-  const shuffleQuestions = (questions) => {
-    if (!questions || questions.length === 0) return [];
-    const shuffled = [...questions];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  };
-
-  // 2. 상태 초기화: 렌더링 시 문제를 섞어서 저장
+function SolverView({ quiz, onBack, onComplete }) {
+  const shuffleQuestions = (questions) => { if (!questions || questions.length === 0) return []; const shuffled = [...questions]; for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; } return shuffled; };
   const [shuffledQuestions, setShuffledQuestions] = useState(() => shuffleQuestions(quiz.questions));
-  
   const [currentQIdx, setCurrentQIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isChecked, setIsChecked] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
-  
   const [userAnswers, setUserAnswers] = useState([]); 
   const [showAllQuestions, setShowAllQuestions] = useState(false);
-
-  // 3. 섞인 문제 리스트 사용
+  useEffect(() => { if (isFinished && onComplete) { const earnedPoints = Math.round((score / quiz.questions.length) * (quiz.points || 0)); onComplete(quiz.id, earnedPoints); } }, [isFinished]);
   const question = shuffledQuestions[currentQIdx];
   const progress = ((currentQIdx + 1) / shuffledQuestions.length) * 100;
   const currentExplanation = question.shortExplanation || question.explanation;
+  const handleSelect = (idx) => { if (isChecked) return; setSelectedOption(idx); };
+  const handleSubmit = () => { if (selectedOption === null) return; setIsChecked(true); const newAnswers = [...userAnswers]; newAnswers[currentQIdx] = selectedOption; setUserAnswers(newAnswers); if (selectedOption === question.answer) setScore(s => s + 1); };
+  const handleNext = () => { if (currentQIdx + 1 < shuffledQuestions.length) { setCurrentQIdx(c => c + 1); setSelectedOption(null); setIsChecked(false); } else { setIsFinished(true); } };
+  const handleRetry = () => { setShuffledQuestions(shuffleQuestions(quiz.questions)); setCurrentQIdx(0); setScore(0); setSelectedOption(null); setIsChecked(false); setIsFinished(false); setUserAnswers([]); setShowAllQuestions(false); window.scrollTo(0, 0); };
 
-  const handleSelect = (idx) => {
-    if (isChecked) return;
-    setSelectedOption(idx);
-  };
-
-  const handleSubmit = () => {
-    if (selectedOption === null) return;
-    setIsChecked(true);
-    const newAnswers = [...userAnswers];
-    newAnswers[currentQIdx] = selectedOption;
-    setUserAnswers(newAnswers);
-    if (selectedOption === question.answer) setScore(s => s + 1);
-  };
-
-  const handleNext = () => {
-    if (currentQIdx + 1 < shuffledQuestions.length) {
-      setCurrentQIdx(c => c + 1);
-      setSelectedOption(null);
-      setIsChecked(false);
-    } else {
-      setIsFinished(true);
-    }
-  };
-
-  const handleRetry = () => {
-    // 4. 다시 풀기 시 문제 재섞기
-    setShuffledQuestions(shuffleQuestions(quiz.questions));
-    setCurrentQIdx(0);
-    setScore(0);
-    setSelectedOption(null);
-    setIsChecked(false);
-    setIsFinished(false);
-    setUserAnswers([]); 
-    setShowAllQuestions(false);
-    window.scrollTo(0, 0);
-  };
-
-  // --- 결과 화면 ---
   if (isFinished) {
     const percentage = Math.round((score / shuffledQuestions.length) * 100);
     const visibleQuestions = showAllQuestions ? shuffledQuestions : [shuffledQuestions[0]];
-
+    const radius = 40; const circumference = 2 * Math.PI * radius; const strokeDashoffset = circumference - (percentage / 100) * circumference;
+    const earnedPoints = Math.round((score / quiz.questions.length) * (quiz.points || 0));
     return (
-      <div className="max-w-2xl mx-auto animate-fade-in pb-20">
-        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden mb-10 text-center relative">
-          <div className="bg-blue-600 h-32 relative">
-            <div className="absolute inset-0 bg-blue-600 opacity-50 pattern-grid-lg"></div>
-            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
-              <div className="w-24 h-24 bg-yellow-400 rounded-full border-4 border-white shadow-lg flex items-center justify-center"><Award className="w-12 h-12 text-white" /></div>
-            </div>
+      <div className="max-w-2xl mx-auto animate-fade-in pb-20 relative">
+        {percentage >= 60 && <Confetti />}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden mb-10 text-center relative">
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-800 dark:to-indigo-900 h-48 relative flex items-center justify-center">
+            <div className="relative w-32 h-32"><svg className="w-full h-full transform -rotate-90"><circle cx="64" cy="64" r={radius} className="stroke-white/20" strokeWidth="8" fill="transparent" /><circle cx="64" cy="64" r={radius} className="stroke-white transition-all duration-1000 ease-out" strokeWidth="8" fill="transparent" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ strokeDashoffset }} /></svg><div className="absolute inset-0 flex flex-col items-center justify-center text-white"><Trophy className="w-8 h-8 mb-1" /><span className="text-2xl font-bold"><AnimatedCounter end={score} /> / {shuffledQuestions.length}</span></div></div>
           </div>
-          <div className="pt-16 pb-8 px-6">
-            <h2 className="text-3xl font-black text-gray-900 mb-2">결과 확인</h2>
-            <p className="text-gray-500 mb-6 text-sm font-medium">{quiz.title}</p>
-            <div className="flex justify-center items-baseline gap-2 mb-6">
-              <span className="text-5xl font-black text-blue-600 tracking-tighter">{score}</span>
-              <span className="text-xl text-gray-400 font-bold">/ {shuffledQuestions.length}</span>
-            </div>
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${percentage === 100 ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-700'}`}>
-              {percentage === 100 ? <Sparkles className="w-4 h-4"/> : <CheckCircle className="w-4 h-4"/>}
-              {percentage === 100 ? '완벽합니다! 🎉' : '수고하셨습니다! 👍'}
-            </div>
-          </div>
+          <div className="pt-8 pb-8 px-6"><h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2">{percentage === 100 ? '완벽합니다! 🎉' : percentage >= 60 ? '훌륭해요! 👍' : '조금 더 힘내세요 💪'}</h2><p className="text-gray-500 dark:text-gray-400 mb-4 text-sm font-medium">{quiz.title}</p><div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full font-bold text-sm"><Coins className="w-4 h-4" /> +{earnedPoints} XP 획득!</div></div>
         </div>
-
-        <div className="mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2 px-2">
-            <BookOpen className="w-5 h-5 text-blue-600" /> 문제 다시보기 & 상세 해설
-          </h3>
-          
-          <div className="space-y-8">
-            {visibleQuestions.map((q, idx) => {
-              const myAnswer = userAnswers[idx];
-              const isCorrect = myAnswer === q.answer;
-              const reviewExplanation = q.detailedExplanation || q.explanation || '해설이 없습니다.';
-              
-              return (
-                <div key={q.id} className={`bg-white rounded-2xl border-2 p-6 ${isCorrect ? 'border-gray-100' : 'border-red-100'}`}>
-                  <div className="mb-4">
-                    <div className="flex gap-3 mb-2">
-                      <span className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${isCorrect ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'}`}>Q{idx + 1}</span>
-                      <h4 className="text-lg font-bold text-gray-800 leading-snug pt-0.5">
-                        <RenderContent content={q.text} />
-                      </h4>
-                    </div>
-                    {q.image && <img src={q.image} alt="참고 이미지" className="block mt-4 max-w-full h-auto max-h-60 rounded-lg object-contain border border-gray-100 mx-auto" />}
-                  </div>
-
-                  <div className="space-y-2 mb-5">
-                    {q.options.map((opt, optIdx) => {
-                      let style = "p-3 rounded-xl border text-sm font-medium flex justify-between items-center ";
-                      if (optIdx === q.answer) style += "bg-green-50 border-green-200 text-green-800";
-                      else if (optIdx === myAnswer && !isCorrect) style += "bg-red-50 border-red-200 text-red-800";
-                      else style += "bg-white border-gray-100 text-gray-400";
-
-                      return (
-                        <div key={optIdx} className={style}>
-                          <RenderContent content={opt} />
-                          {optIdx === q.answer && <Check className="w-4 h-4 text-green-600"/>}
-                          {optIdx === myAnswer && !isCorrect && <X className="w-4 h-4 text-red-600"/>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <details className="group bg-gray-50 rounded-xl overflow-hidden transition-all duration-300 border border-gray-100">
-                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none select-none hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center gap-2 text-sm font-bold text-gray-700"><Lightbulb className="w-5 h-5 text-yellow-500" /><span>해설 확인하기</span></div>
-                      <ChevronDown className="w-4 h-4 text-gray-400 transition-transform duration-300 group-open:rotate-180" />
-                    </summary>
-                    <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed border-t border-gray-200 pt-4 bg-white">
-                      <span className="font-bold text-gray-900 block mb-2">상세 해설</span>
-                      <RenderContent content={reviewExplanation} />
-                    </div>
-                  </details>
-                </div>
-              );
-            })}
-          </div>
-
-          {!showAllQuestions && shuffledQuestions.length > 1 && (
-            <button onClick={() => setShowAllQuestions(true)} className="w-full mt-6 py-4 bg-white border-2 border-dashed border-gray-300 rounded-2xl text-gray-500 font-bold hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition-all flex items-center justify-center gap-2">
-              나머지 {shuffledQuestions.length - 1}문제 전체 보기 <ChevronDown className="w-5 h-5" />
-            </button>
-          )}
+        <div className="mb-8"><h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2 px-2"><BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" /> 문제 다시보기 & 상세 해설</h3><div className="space-y-8">{visibleQuestions.map((q, idx) => { const myAnswer = userAnswers[idx]; const isCorrect = myAnswer === q.answer; const reviewExplanation = q.detailedExplanation || q.explanation || '해설이 없습니다.'; return (<div key={q.id} className={`bg-white dark:bg-gray-800 rounded-2xl border-2 p-6 ${isCorrect ? 'border-gray-100 dark:border-gray-700' : 'border-red-100 dark:border-red-900/50'}`}><div className="mb-4"><div className="flex gap-3 mb-2"><span className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${isCorrect ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>Q{idx + 1}</span><h4 className="text-lg font-bold text-gray-800 dark:text-gray-100 leading-snug pt-0.5"><RenderContent content={q.text} /></h4></div>{q.image && <img src={q.image} alt="참고 이미지" className="block mt-4 max-w-full h-auto max-h-60 rounded-lg object-contain border border-gray-100 dark:border-gray-700 mx-auto" />}</div><div className="space-y-2 mb-5">{q.options.map((opt, optIdx) => { let style = "p-3 rounded-xl border text-sm font-medium flex justify-between items-center "; if (optIdx === q.answer) style += "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300"; else if (optIdx === myAnswer && !isCorrect) style += "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300"; else style += "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500"; return (<div key={optIdx} className={style}><RenderContent content={opt} />{optIdx === q.answer && <Check className="w-4 h-4 text-green-600 dark:text-green-400"/>}{optIdx === myAnswer && !isCorrect && <X className="w-4 h-4 text-red-600 dark:text-red-400"/>}</div>); })}</div><details className="group bg-gray-50 dark:bg-gray-700/50 rounded-xl overflow-hidden transition-all duration-300 border border-gray-100 dark:border-gray-700"><summary className="flex items-center justify-between p-4 cursor-pointer list-none select-none hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><div className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300"><Lightbulb className="w-5 h-5 text-yellow-500" /><span>해설 확인하기</span></div><ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-300 group-open:rotate-180" /></summary><div className="px-4 pb-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed border-t border-gray-200 dark:border-gray-700 pt-4 bg-white dark:bg-gray-800"><span className="font-bold text-gray-900 dark:text-white block mb-2">상세 해설</span><RenderContent content={reviewExplanation} /></div></details></div>); })}</div>
+          {!showAllQuestions && shuffledQuestions.length > 1 && (<button onClick={() => setShowAllQuestions(true)} className="w-full mt-6 py-4 bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl text-gray-500 dark:text-gray-400 font-bold hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-2">나머지 {shuffledQuestions.length - 1}문제 전체 보기 <ChevronDown className="w-5 h-5" /></button>)}
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-3 sticky bottom-4 bg-white/80 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-gray-200">
-          <button onClick={handleRetry} className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 flex justify-center items-center gap-2 shadow-md transition-all"><RefreshCw className="w-5 h-5" /> 다시 풀기</button>
-          <button onClick={onBack} className="flex-1 bg-white text-gray-700 border border-gray-300 py-3 rounded-xl font-bold hover:bg-gray-50 flex justify-center items-center gap-2 transition-all">다른 퀴즈 풀러가기</button>
-        </div>
+        <div className="flex flex-col sm:flex-row gap-3 sticky bottom-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"><button onClick={handleRetry} className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 flex justify-center items-center gap-2 shadow-md transition-all"><RefreshCw className="w-5 h-5" /> 다시 풀기</button><button onClick={onBack} className="flex-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-center items-center gap-2 transition-all">다른 퀴즈 풀러가기</button></div>
       </div>
     );
   }
-
-  // --- 문제 풀이 화면 ---
   return (
     <div className="animate-fade-in">
-      <div className="mb-8 flex items-center justify-between">
-        <button onClick={onBack} className="text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors flex items-center gap-1">&larr; 나가기</button>
-        <div className="flex items-center gap-3">
-          <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-600 transition-all duration-500" style={{width: `${progress}%`}}></div>
-          </div>
-          <span className="text-sm font-bold text-blue-600">{currentQIdx + 1} / {shuffledQuestions.length}</span>
-        </div>
+      <div className="mb-8 flex items-center justify-between"><button onClick={onBack} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-sm font-medium transition-colors flex items-center gap-1">&larr; 나가기</button><div className="flex items-center gap-3"><div className="w-24 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-blue-600 transition-all duration-500" style={{width: `${progress}%`}}></div></div><span className="text-sm font-bold text-blue-600 dark:text-blue-400">{currentQIdx + 1} / {shuffledQuestions.length}</span></div></div>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-8 mb-6">
+        {question.context && (<div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-gray-700 dark:text-gray-300 text-sm font-medium border border-gray-100 dark:border-gray-700"><RenderContent content={question.context} /></div>)}
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 leading-relaxed"><span className="mr-2 text-blue-600 dark:text-blue-400">Q.</span><RenderContent content={question.text} /></h2>
+        {question.image && (<div className="mb-8 flex justify-center"><img src={question.image} alt="문제 이미지" className="max-w-full max-h-80 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 object-contain bg-white" /></div>)}
+        <div className="space-y-3">{question.options.map((option, idx) => { let statusClass = "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"; if (selectedOption === idx) statusClass = "border-blue-600 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300"; if (isChecked) { if (idx === question.answer) statusClass = "border-green-500 dark:border-green-600 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-400"; else if (idx === selectedOption) statusClass = "border-red-500 dark:border-red-600 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400"; else statusClass = "border-gray-100 dark:border-gray-700 text-gray-300 dark:text-gray-600 opacity-50"; } return (<button key={idx} onClick={() => handleSelect(idx)} disabled={isChecked} className={`w-full text-left p-4 rounded-xl border-2 transition-all font-medium flex justify-between items-center ${statusClass}`}><RenderContent content={option} />{isChecked && idx === question.answer && <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500" />}{isChecked && idx === selectedOption && idx !== question.answer && <XCircle className="w-5 h-5 text-red-600 dark:text-red-500" />}</button>); })}</div>
       </div>
-
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 mb-6">
-        {/* 1. 질문 텍스트 */}
-        <h2 className="text-xl font-bold text-gray-900 mb-6 leading-relaxed">
-          <span className="mr-2 text-blue-600">Q.</span>
-          <RenderContent content={question.text} />
-        </h2>
-
-        {/* 2. 이미지 */}
-        {question.image && (
-          <div className="mb-8 flex justify-center">
-            <img 
-              src={question.image} 
-              alt="문제 이미지" 
-              className="max-w-full max-h-80 rounded-lg shadow-sm border border-gray-100 object-contain"
-            />
-          </div>
-        )}
-
-        <div className="space-y-3">
-          {question.options.map((option, idx) => {
-            let statusClass = "border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700";
-            if (selectedOption === idx) statusClass = "border-blue-600 bg-blue-50 text-blue-800";
-            if (isChecked) {
-              if (idx === question.answer) statusClass = "border-green-500 bg-green-50 text-green-800";
-              else if (idx === selectedOption) statusClass = "border-red-500 bg-red-50 text-red-800";
-              else statusClass = "border-gray-100 text-gray-300 opacity-50";
-            }
-
-            return (
-              <button key={idx} onClick={() => handleSelect(idx)} disabled={isChecked} className={`w-full text-left p-4 rounded-xl border-2 transition-all font-medium flex justify-between items-center ${statusClass}`}>
-                <RenderContent content={option} />
-                {isChecked && idx === question.answer && <CheckCircle className="w-5 h-5 text-green-600" />}
-                {isChecked && idx === selectedOption && idx !== question.answer && <XCircle className="w-5 h-5 text-red-600" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {!isChecked ? (
-        <button onClick={handleSubmit} disabled={selectedOption === null} className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg ${selectedOption === null ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none' : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200'}`}>정답 확인</button>
-      ) : (
-        <div className="animate-fade-in-up">
-          {currentExplanation && (
-            <div className={`p-5 rounded-xl mb-6 flex gap-3 ${selectedOption === question.answer ? 'bg-green-50 border border-green-100' : 'bg-red-50 border border-red-100'}`}>
-              <MessageCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${selectedOption === question.answer ? 'text-green-600' : 'text-red-600'}`} />
-              <div>
-                <p className={`font-bold mb-1 ${selectedOption === question.answer ? 'text-green-800' : 'text-red-800'}`}>{selectedOption === question.answer ? '정답입니다!' : '오답입니다.'}</p>
-                <p className="text-gray-700 text-sm leading-relaxed"><RenderContent content={currentExplanation} /></p>
-              </div>
-            </div>
-          )}
-          <button onClick={handleNext} className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 shadow-lg flex justify-center items-center gap-2">{currentQIdx + 1 < shuffledQuestions.length ? '다음 문제' : '결과 보기'} <ChevronRight className="w-5 h-5" /></button>
-        </div>
-      )}
+      {!isChecked ? (<button onClick={handleSubmit} disabled={selectedOption === null} className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg ${selectedOption === null ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed shadow-none' : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200'}`}>정답 확인</button>) : (<div className="animate-fade-in-up">{currentExplanation && (<div className={`p-5 rounded-xl mb-6 flex gap-3 ${selectedOption === question.answer ? 'bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800'}`}><MessageCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${selectedOption === question.answer ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} /><div><p className={`font-bold mb-1 ${selectedOption === question.answer ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>{selectedOption === question.answer ? '정답입니다!' : '오답입니다.'}</p><p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed"><RenderContent content={currentExplanation} /></p></div></div>)}<button onClick={handleNext} className="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-4 rounded-xl font-bold text-lg hover:bg-gray-800 dark:hover:bg-gray-100 shadow-lg flex justify-center items-center gap-2">{currentQIdx + 1 < shuffledQuestions.length ? '다음 문제' : '결과 보기'} <ChevronRight className="w-5 h-5" /></button></div>)}
     </div>
   );
 }
