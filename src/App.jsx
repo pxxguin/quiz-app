@@ -24,106 +24,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 
 // --- [데이터] 정적 퀴즈 데이터 ---
-const STATIC_QUIZ_DATA = [
-  {
-    id: 'quiz-math-001',
-    title: '수학 및 과학 기초 (수식 테스트)',
-    description: '이미지와 LaTeX 수식이 포함된 문제들을 테스트합니다.',
-    author: 'ScienceLab',
-    category: 'Math',
-    points: 100,
-    createdAt: '2024-05-26',
-    questions: [
-      {
-        id: 101,
-        image: 'https://i.imgur.com/c5wW32w.png', 
-        text: '다음 그림에서 밑변이 $a=3$, 높이가 $b=4$일 때, 빗변 $c$의 값은?',
-        options: ['$c = 4$', '$c = 5$', '$c = 6$', '$c = \\sqrt{20}$'],
-        answer: 1,
-        shortExplanation: '피타고라스의 정리를 이용하세요.',
-        detailedExplanation: '피타고라스의 정리 $a^2 + b^2 = c^2$ 에 대입하면, $3^2 + 4^2 = 9 + 16 = 25$ 입니다. 따라서 $c^2 = 25$ 이므로 $c=5$ 입니다.',
-      }
-    ]
-  },
-  {
-    id: 'quiz-001',
-    title: '인공지능 기초 상식',
-    description: 'AI, 머신러닝, 딥러닝의 기본 개념을 잘 이해하고 있는지 테스트해보세요.',
-    author: '관리자',
-    category: 'AI', 
-    points: 50,
-    createdAt: '2024-05-25',
-    questions: [
-      {
-        id: 101,
-        text: '다음 중 인공지능 분야의 포함 관계가 올바른 것은?',
-        options: ['딥러닝 > 머신러닝 > 인공지능', '인공지능 > 머신러닝 > 딥러닝', '머신러닝 > 인공지능 > 딥러닝', '모두 별개의 개념이다'],
-        answer: 1,
-        shortExplanation: '가장 큰 개념이 무엇인지 생각해보세요. (AI > ML > DL)',
-        detailedExplanation: '인공지능(AI)이 가장 포괄적인 개념이며, 그 안에 데이터를 학습하는 머신러닝(ML)이 포함되고, 머신러닝 안에 인공신경망을 사용하는 딥러닝(DL)이 포함됩니다.',
-      }
-    ]
-  },
-  {
-    id: 'quiz-002',
-    title: '웹 개발 기초 (React)',
-    description: '리액트의 기본 동작 원리와 훅(Hook)에 대한 퀴즈입니다.',
-    author: 'DevTeam',
-    category: 'Web',
-    points: 50,
-    createdAt: '2024-05-21',
-    questions: [
-      {
-        id: 201,
-        text: 'React 컴포넌트에서 상태(State)를 관리하기 위해 사용하는 Hook은?',
-        options: ['useEffect', 'useState', 'useContext', 'useReducer'],
-        answer: 1,
-        shortExplanation: '상태(State)를 사용(Use)한다는 단어를 떠올려보세요.',
-        detailedExplanation: 'useState는 함수형 컴포넌트에서 가변적인 상태를 관리할 수 있게 해주는 가장 기본적인 Hook입니다.',
-      }
-    ]
-  },
-  {
-    id: 'quiz-003',
-    title: '컴퓨터 구조 (CS)',
-    description: 'CPU, 메모리, 운영체제 등 컴퓨터 공학 기초 지식을 다룹니다.',
-    author: 'Prof.K',
-    category: 'CS',
-    points: 80,
-    createdAt: '2024-05-10',
-    questions: [
-      {
-        id: 301,
-        text: 'CPU 내부에서 연산을 담당하는 장치는?',
-        options: ['ALU', 'CU', 'Register', 'Cache'],
-        answer: 0,
-        shortExplanation: 'Arithmetic Logic Unit의 약자입니다.',
-        detailedExplanation: 'ALU(Arithmetic Logic Unit, 산술논리장치)는 CPU의 핵심 부품 중 하나로, 덧셈/뺄셈 같은 산술 연산과 AND/OR 같은 논리 연산을 실제로 수행하는 장치입니다.',
-      }
-    ]
-  },
-  {
-    id: 'quiz-004',
-    title: '네트워크 기초 (Network)',
-    description: 'IP, TCP/UDP, HTTP 등 네트워크 통신에 대한 기본 퀴즈입니다.',
-    author: 'NetMaster',
-    category: 'Network',
-    points: 70,
-    createdAt: '2024-05-05',
-    questions: [
-      {
-        id: 401,
-        text: '웹 브라우저와 서버 간의 통신에 주로 사용되는 프로토콜은?',
-        options: ['FTP', 'SMTP', 'HTTP', 'SSH'],
-        answer: 2,
-        shortExplanation: 'HyperText Transfer Protocol입니다.',
-        detailedExplanation: 'HTTP(HyperText Transfer Protocol)는 월드 와이드 웹(WWW) 상에서 정보를 주고받을 때 사용하는 프로토콜입니다.',
-      }
-    ]
-  }
-];
+const quizModules = import.meta.glob('./quizzes/*.js', { eager: true });
+const LOADED_QUIZZES = Object.values(quizModules).map(module => module.default);
 
-const INITIAL_QUIZZES = STATIC_QUIZ_DATA;
+// ⚠️ 로컬에서 파일을 불러올 때는 여기를 LOADED_QUIZZES 로 변경하세요.
+const INITIAL_QUIZZES = LOADED_QUIZZES;
 
 // ----------------------------------------------------------------------
 // 🏆 [Logic] 10단계 티어 계산 시스템
