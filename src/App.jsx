@@ -206,9 +206,23 @@ function HomeView({ quizzes, onSelect }) {
 }
 
 // ----------------------------------------------------------------------
-// VIEW 2: Solver (레이아웃 수정됨: Q -> Image -> Option)
+// VIEW 2: Solver (랜덤 셔플 기능 추가됨)
 // ----------------------------------------------------------------------
 function SolverView({ quiz, onBack }) {
+  // 1. 문제 섞기 함수 (Fisher-Yates Shuffle)
+  const shuffleQuestions = (questions) => {
+    if (!questions || questions.length === 0) return [];
+    const shuffled = [...questions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // 2. 상태 초기화: 렌더링 시 문제를 섞어서 저장
+  const [shuffledQuestions, setShuffledQuestions] = useState(() => shuffleQuestions(quiz.questions));
+  
   const [currentQIdx, setCurrentQIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -218,8 +232,9 @@ function SolverView({ quiz, onBack }) {
   const [userAnswers, setUserAnswers] = useState([]); 
   const [showAllQuestions, setShowAllQuestions] = useState(false);
 
-  const question = quiz.questions[currentQIdx];
-  const progress = ((currentQIdx + 1) / quiz.questions.length) * 100;
+  // 3. 섞인 문제 리스트 사용
+  const question = shuffledQuestions[currentQIdx];
+  const progress = ((currentQIdx + 1) / shuffledQuestions.length) * 100;
   const currentExplanation = question.shortExplanation || question.explanation;
 
   const handleSelect = (idx) => {
@@ -237,7 +252,7 @@ function SolverView({ quiz, onBack }) {
   };
 
   const handleNext = () => {
-    if (currentQIdx + 1 < quiz.questions.length) {
+    if (currentQIdx + 1 < shuffledQuestions.length) {
       setCurrentQIdx(c => c + 1);
       setSelectedOption(null);
       setIsChecked(false);
@@ -247,6 +262,8 @@ function SolverView({ quiz, onBack }) {
   };
 
   const handleRetry = () => {
+    // 4. 다시 풀기 시 문제 재섞기
+    setShuffledQuestions(shuffleQuestions(quiz.questions));
     setCurrentQIdx(0);
     setScore(0);
     setSelectedOption(null);
@@ -259,8 +276,8 @@ function SolverView({ quiz, onBack }) {
 
   // --- 결과 화면 ---
   if (isFinished) {
-    const percentage = Math.round((score / quiz.questions.length) * 100);
-    const visibleQuestions = showAllQuestions ? quiz.questions : [quiz.questions[0]];
+    const percentage = Math.round((score / shuffledQuestions.length) * 100);
+    const visibleQuestions = showAllQuestions ? shuffledQuestions : [shuffledQuestions[0]];
 
     return (
       <div className="max-w-2xl mx-auto animate-fade-in pb-20">
@@ -276,7 +293,7 @@ function SolverView({ quiz, onBack }) {
             <p className="text-gray-500 mb-6 text-sm font-medium">{quiz.title}</p>
             <div className="flex justify-center items-baseline gap-2 mb-6">
               <span className="text-5xl font-black text-blue-600 tracking-tighter">{score}</span>
-              <span className="text-xl text-gray-400 font-bold">/ {quiz.questions.length}</span>
+              <span className="text-xl text-gray-400 font-bold">/ {shuffledQuestions.length}</span>
             </div>
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${percentage === 100 ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-700'}`}>
               {percentage === 100 ? <Sparkles className="w-4 h-4"/> : <CheckCircle className="w-4 h-4"/>}
@@ -305,7 +322,6 @@ function SolverView({ quiz, onBack }) {
                         <RenderContent content={q.text} />
                       </h4>
                     </div>
-                    {/* 리뷰 화면: 이미지 하단 배치 */}
                     {q.image && <img src={q.image} alt="참고 이미지" className="block mt-4 max-w-full h-auto max-h-60 rounded-lg object-contain border border-gray-100 mx-auto" />}
                   </div>
 
@@ -340,9 +356,9 @@ function SolverView({ quiz, onBack }) {
             })}
           </div>
 
-          {!showAllQuestions && quiz.questions.length > 1 && (
+          {!showAllQuestions && shuffledQuestions.length > 1 && (
             <button onClick={() => setShowAllQuestions(true)} className="w-full mt-6 py-4 bg-white border-2 border-dashed border-gray-300 rounded-2xl text-gray-500 font-bold hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition-all flex items-center justify-center gap-2">
-              나머지 {quiz.questions.length - 1}문제 전체 보기 <ChevronDown className="w-5 h-5" />
+              나머지 {shuffledQuestions.length - 1}문제 전체 보기 <ChevronDown className="w-5 h-5" />
             </button>
           )}
         </div>
@@ -355,7 +371,7 @@ function SolverView({ quiz, onBack }) {
     );
   }
 
-  // --- 문제 풀이 화면 (수정됨: Context 제거 & 이미지 하단 배치) ---
+  // --- 문제 풀이 화면 ---
   return (
     <div className="animate-fade-in">
       <div className="mb-8 flex items-center justify-between">
@@ -364,18 +380,18 @@ function SolverView({ quiz, onBack }) {
           <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
             <div className="h-full bg-blue-600 transition-all duration-500" style={{width: `${progress}%`}}></div>
           </div>
-          <span className="text-sm font-bold text-blue-600">{currentQIdx + 1} / {quiz.questions.length}</span>
+          <span className="text-sm font-bold text-blue-600">{currentQIdx + 1} / {shuffledQuestions.length}</span>
         </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 mb-6">
-        {/* 1. 질문 텍스트 먼저 표시 */}
+        {/* 1. 질문 텍스트 */}
         <h2 className="text-xl font-bold text-gray-900 mb-6 leading-relaxed">
           <span className="mr-2 text-blue-600">Q.</span>
           <RenderContent content={question.text} />
         </h2>
 
-        {/* 2. 이미지 하단 배치 */}
+        {/* 2. 이미지 */}
         {question.image && (
           <div className="mb-8 flex justify-center">
             <img 
@@ -420,7 +436,7 @@ function SolverView({ quiz, onBack }) {
               </div>
             </div>
           )}
-          <button onClick={handleNext} className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 shadow-lg flex justify-center items-center gap-2">{currentQIdx + 1 < quiz.questions.length ? '다음 문제' : '결과 보기'} <ChevronRight className="w-5 h-5" /></button>
+          <button onClick={handleNext} className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 shadow-lg flex justify-center items-center gap-2">{currentQIdx + 1 < shuffledQuestions.length ? '다음 문제' : '결과 보기'} <ChevronRight className="w-5 h-5" /></button>
         </div>
       )}
     </div>
