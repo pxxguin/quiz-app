@@ -11,13 +11,13 @@ import {
 // 🚨 [설정] 로컬 개발용 Supabase 라이브러리 Import
 // 로컬 VS Code에서 실행할 때는 아래 import 문의 주석을 해제하세요!
 // ----------------------------------------------------------------------
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { createClient } from '@supabase/supabase-js';
 
-// 키가 없을 경우(로컬 개발 환경 등)에는 null 처리하여 에러 방지
-const supabase = (supabaseUrl && supabaseKey) 
-  ? createClient(supabaseUrl, supabaseKey) 
-  : null;
+const supabaseUrl = 'https://sawcthxuizskcufrgopa.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhd2N0aHh1aXpza2N1ZnJnb3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2NDI5NTAsImV4cCI6MjA3OTIxODk1MH0.kjcK-N6nV2XP_gk0F1cGqrfe3Cw-r85MU1PFODws5sI';
+
+// ⚠️ 로컬에서는 아래 createClient 주석을 풀고, 그 밑에 있는 const supabase = null; 을 지우세요.
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // (미리보기 에러 방지용 더미 객체 - 로컬에서는 지우세요!)
 // const supabase = null; 
