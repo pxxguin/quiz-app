@@ -1,0 +1,39 @@
+name: Deploy to GitHub Pages (Injecting Secrets)
+
+on:
+  push:
+    branches:
+      - main  # main 브랜치에 푸시될 때 실행
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+        
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      # 🚀 빌드 단계에서 환경 변수(Secrets) 주입
+      # VITE_ 접두사가 붙은 Secret 값만 Vite 빌드 시 앱 코드에서 접근 가능합니다.
+      - name: Build project and Inject Secrets
+        run: npm run build
+        env:
+          # GitHub Secrets에 등록된 변수명을 그대로 사용
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
