@@ -1,0 +1,83 @@
+export default {
+  id: 'quiz-nlp-002',
+  title: 'Attention 알고리즘의 이해',
+  description: 'What is Attention Algorithms?에 대한 퀴즈입니다. 해당 포스팅을 참고하여 문제를 풀어보세요.',
+  author: 'Hong',
+  category: '자연어 처리',
+  points: 100,
+  createdAt: '2025-11-19',
+  questions: [
+    {
+      id: 101,
+      // image: 'https://i.imgur.com/c5wW32w.png', 
+      text: '다음 중 양방향 인코딩을 사용하는 모델은 무엇인가요?',
+      options: ['GPT', 'BERT', 'Transformer-XL', 'XLNet'],
+      answer: 1,
+      shortExplanation: 'BERT는 양방향 인코딩을 사용하는 모델입니다.',
+      detailedExplanation: 'BERT는 양방향 인코딩을 통해 문맥을 이해하며, 이는 단어의 의미를 더 정확하게 파악하는 데 도움을 줍니다. 반면에 GPT는 주로 단방향 인코딩을 사용합니다.',
+    },
+    {
+      id: 102,
+      image: 'https://oopy.lazyrockets.com/api/v2/notion/image?src=https%3A%2F%2Fprod-files-secure.s3.us-west-2.amazonaws.com%2Fce8e41da-e328-4234-980e-0a1677626698%2Fbc8e4f15-4aec-49f0-a619-8649134e4c44%2Fimage.png&blockId=12c26cea-9de8-8111-a387-d2a399360a3e',
+      text: '다음은 Transformer 모델의 구조입니다. 그림에서 나타난 "Self-Attention" 메커니즘의 주요 목적은 무엇인가요?',
+      options: ['입력 시퀀스의 각 단어가 다른 단어들과의 관계를 이해하도록 돕기 위해', '출력 시퀀스를 생성하기 위해', '모델의 학습 속도를 높이기 위해', '데이터 전처리를 위해'],
+      answer: 0,
+      shortExplanation: 'Self-Attention 메커니즘은 입력 시퀀스의 각 단어가 다른 단어들과의 관계를 이해하도록 돕습니다.',
+      detailedExplanation: 'Self-Attention은 입력 시퀀스 내의 단어들이 서로 어떻게 관련되어 있는지를 파악하는 데 사용됩니다. 이를 통해 모델은 문맥을 더 잘 이해하고, 더 정확한 예측을 할 수 있습니다.',
+    },
+    {
+      id: 103,
+      text: 'Encoder 모델의 기본 구성 순서로 올바른 것은 무엇인가요?',
+      options: [
+        'Input Embedding → Positional Encoding → Multi-Head Attention → Feed Forward Neural Network',
+        'Input Embedding → Multi-Head Attention → Positional Encoding → Feed Forward Neural Network',
+        'Input Embedding → Positional Encoding → Feed Forward Neural Network → Multi-Head Attention',
+        'Positional Encoding → Input Embedding → Multi-Head Attention → Layer Normalization'
+      ],
+      answer: 0,
+      shortExplanation: 'Encoder는 임베딩과 위치 인코딩 후 어텐션과 FFNN을 거칩니다.',
+      detailedExplanation: 'Transformer Encoder의 표준 순서는 입력 임베딩에 위치 정보를 더한 후(Positional Encoding), Multi-Head Attention을 수행하고 마지막으로 Feed Forward Network를 통과하는 구조입니다.',
+    },
+    {
+      id: 104,
+      // image: 'https://i.imgur.com/c5wW32w.png', 
+      text: '잔차 연결에 대해서 올바르게 설명한 것은 무엇인가요?',
+      options: ['잔차 연결은 모델의 깊이를 줄이기 위해 사용된다.', '잔차 연결은 입력 신호를 출력에 직접 더하여 그래디언트 소실 문제를 완화한다.', '잔차 연결은 오직 RNN 모델에서만 사용된다.', '잔차 연결은 모델의 학습 속도를 늦추기 위해 사용된다.'],
+      answer: 1,
+      shortExplanation: '잔차 연결은 입력 신호를 출력에 직접 더하여 그래디언트 소실 문제를 완화합니다.',
+      detailedExplanation: '잔차 연결(Residual Connection)은 딥러닝 모델에서 그래디언트 소실 문제를 완화하기 위해 사용됩니다. 이는 입력 신호를 출력에 직접 더함으로써, 깊은 네트워크에서도 효과적으로 학습이 이루어질 수 있도록 돕습니다.',
+    },
+    {
+      id: 105,
+      text: 'RNN과 LSTM의 주요 차이점은 무엇인가요?',
+      options: ['RNN은 순환 구조를 가지지만 LSTM은 그렇지 않다.', 'LSTM은 장기 의존성 문제를 해결하기 위해 게이트 메커니즘을 사용한다.', 'RNN은 더 복잡한 모델이다.', 'LSTM은 오직 이미지 처리에만 사용된다.'],
+      answer: 1,
+      shortExplanation: 'LSTM은 장기 의존성 문제를 해결하기 위해 게이트 메커니즘을 사용합니다.',
+      detailedExplanation: 'LSTM(Long Short-Term Memory)은 RNN의 한 종류로, 장기 의존성 문제를 해결하기 위해 입력 게이트, 출력 게이트, 망각 게이트 등의 게이트 메커니즘을 도입했습니다. 이를 통해 LSTM은 긴 시퀀스에서도 효과적으로 정보를 유지하고 학습할 수 있습니다.',
+    },
+    {
+      id: 106,
+      text: '$\sqrt{d_k}$는 왜 Attention 메커니즘에서 사용되나요?',
+      options: ['계산 속도를 높이기 위해', '모델의 복잡성을 줄이기 위해', '내적 값이 너무 커지는 것을 방지하기 위해', '출력의 차원을 맞추기 위해'],
+      answer: 2,
+      shortExplanation: '$\sqrt{d_k}$는 내적 값이 너무 커지는 것을 방지하기 위해 사용됩니다.',
+      detailedExplanation: 'Attention 메커니즘에서 쿼리와 키의 내적 값이 커질 경우, 소프트맥스 함수의 기울기가 매우 작아져 학습이 어려워질 수 있습니다. 이를 방지하기 위해 내적 값을 $\sqrt{d_k}$로 나누어 스케일링을 수행합니다.',
+    },
+    {
+      id: 107,
+      text: '[CLS]와 [SEP] 토큰의 역할은 무엇인가요?',
+      options: ['[CLS]는 문장의 시작을 나타내고, [SEP]는 문장의 끝을 나타낸다.', '[CLS]는 문장 분류를 위해 사용되고, [SEP]는 문장 구분을 위해 사용된다.', '[CLS]는 단어 임베딩을 위한 토큰이고, [SEP]는 위치 임베딩을 위한 토큰이다.', '[CLS]와 [SEP]는 동일한 역할을 한다.'],
+      answer: 1,
+      shortExplanation: '[CLS]는 문장 분류를 위해 사용되고, [SEP]는 문장 구분을 위해 사용됩니다.',
+      detailedExplanation: '[CLS] 토큰은 BERT 모델에서 문장 전체의 표현을 얻기 위해 사용되며, 주로 문장 분류 작업에 활용됩니다. [SEP] 토큰은 두 문장 또는 문장과 문장 사이를 구분하는 역할을 합니다.',
+    },
+    {
+      id: 108,
+      text: 'RNN, LSTM과 Transformer 모델의 주요 차이점은 무엇일까요?',
+      options: ['RNN과 LSTM은 순차적으로 데이터를 처리하지만, Transformer는 병렬로 처리한다.', 'Transformer는 오직 이미지 데이터에만 사용된다.', 'RNN과 LSTM은 더 복잡한 모델이다.', 'Transformer는 순환 구조를 가진다.'],
+      answer: 0,
+      shortExplanation: 'RNN과 LSTM은 순차적으로 데이터를 처리하지만, Transformer는 병렬로 처리합니다.',
+      detailedExplanation: 'RNN과 LSTM은 시퀀스 데이터를 순차적으로 처리하는 반면, Transformer 모델은 Self-Attention 메커니즘을 사용하여 입력 시퀀스를 병렬로 처리할 수 있습니다. 이로 인해 Transformer는 더 빠른 학습 속도와 더 긴 시퀀스에 대한 효과적인 처리가 가능합니다.',
+    }
+  ]
+};

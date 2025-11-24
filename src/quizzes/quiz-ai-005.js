@@ -1,0 +1,76 @@
+export default {
+  id: 'quiz-ai-005',
+  title: '딥러닝에서의 Optimizer 이해하기',
+  description: 'SGD부터 Adam까지, 딥러닝 모델의 학습 성능을 결정짓는 다양한 Optimizer의 원리와 특징을 테스트해보세요. 해당 포스팅을 참고하여 문제를 풀어보세요.',
+  author: 'Hong',
+  category: '딥러닝',
+  points: 100,
+  createdAt: '2025-11-24',
+  questions: [
+    {
+      id: 401,
+      text: '전체 데이터가 아닌 랜덤하게 추출한 일부 데이터만 사용하여 가중치를 업데이트하는 방식을 무엇이라 하나요?',
+      options: ['배치 경사 하강법', '확률적 경사 하강법', '모멘텀', '뉴턴 랩슨 법'],
+      answer: 1,
+      shortExplanation: 'SGD는 속도가 빠르고 메모리를 적게 차지하며, 불규칙한 움직임으로 인해 Local Minimum에서 탈출할 가능성이 생깁니다.',
+      detailedExplanation: '확률적 경사 하강법은 전체 데이터셋(배치) 대신 미니 배치를 사용하여 매 단계마다 경사를 계산합니다. 이로 인해 계산 속도가 훨씬 빠르며, 불안정한 경로를 그리며 이동하기 때문에 지역 최솟값에 갇히는 문제를 어느 정도 완화할 수 있습니다.',
+    },
+    {
+      id: 402,
+      text: '기본 경사 하강법의 단점인 지그재그 진동 현상을 줄이기 위해, 물리적인 관성 개념을 도입한 Optimizer는 무엇인가요?',
+      options: ['Adagrad', 'RMSProp', 'Momentum', 'Adam'],
+      answer: 2,
+      shortExplanation: 'Momentum은 이전 단계의 이동 방향과 속도를 기억하여 현재 기울기에 반영합니다.',
+      detailedExplanation: 'Momentum 방식은 공이 비탈길을 굴러가듯, 이전에 이동했던 방향으로 계속 가려는 성질(관성)을 이용합니다. 이를 통해 기울기가 급격하게 변하는 지점에서도 진동을 억제하고 학습 속도를 유지할 수 있습니다.',
+    },
+    {
+      id: 403,
+      text: 'Adagrad 알고리즘의 가장 치명적인 단점은 무엇인가요?',
+      options: ['학습이 진행될수록 학습률이 0에 수렴하여 학습이 멈춘다.', '메모리 사용량이 너무 많다.', '구현이 매우 복잡하다.', 'Loss가 발산하기 쉽다.'],
+      answer: 0,
+      shortExplanation: '과거의 기울기 제곱을 계속 누적하기 때문에 학습률이 점차 작아져 결국 갱신이 되지 않습니다.',
+      detailedExplanation: 'Adagrad는 변수마다 맞춤형 학습률을 적용하기 위해 과거의 기울기 제곱합을 분모에 사용합니다. 학습이 오래 진행되면 이 값이 무한히 커지게 되고, 결과적으로 학습률이 0이 되어 더 이상 가중치가 업데이트되지 않는 문제가 발생합니다.',
+    },
+    {
+      id: 404,
+      text: 'Adagrad의 학습 조기 종료 문제를 해결하기 위해, 지수 이동 평균을 사용하여 먼 과거의 기울기 정보는 잊고 최근 정보를 크게 반영하는 방식은?',
+      options: ['Momentum', 'RMSProp', 'NAG', 'SGD'],
+      answer: 1,
+      shortExplanation: 'RMSProp은 지수 이동 평균을 통해 과거의 모든 기울기를 균일하게 더하지 않고 감쇠시킵니다.',
+      detailedExplanation: 'RMSProp은 Adagrad의 $h$ 값(기울기 제곱 누적)을 구할 때 지수 가중 이동 평균을 사용합니다. 이를 통해 오래된 기울기의 영향력은 줄어들고 최근 기울기의 영향력이 유지되어, 학습률이 급격히 0이 되는 것을 방지합니다.',
+    },
+    {
+      id: 405,
+      // image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Adam_optimization.svg/440px-Adam_optimization.svg.png', 
+      text: '현재 딥러닝 분야에서 가장 널리 쓰이는 Optimizer로, Momentum과 RMSProp의 장점을 결합한 것은 무엇인가요?',
+      options: ['AdaDelta', 'Nadam', 'Adam', 'AdamW'],
+      answer: 2,
+      shortExplanation: 'Adam은 Momentum의 관성 효과와 RMSProp의 학습률 조절 효과를 모두 가집니다.',
+      detailedExplanation: 'Adam(Adaptive Moment Estimation)은 진행하던 속도에 관성을 주는 Momentum 방식과, 가중치마다 학습률을 다르게 적용하는 RMSProp 방식을 합친 알고리즘입니다. 또한 초기 학습 시 편향 보정(Bias Correction)까지 수행하여 안정적인 학습을 돕습니다.',
+    },
+    {
+      id: 406,
+      text: '경사 하강법이 멈춰버리는 지점 중, 미분값은 0이지만 극솟값이 아닌 지점(말안장 모양)을 무엇이라 하나요?',
+      options: ['Global Minimum', 'Local Minimum', 'Saddle Point', 'Plateau'],
+      answer: 2,
+      shortExplanation: 'Saddle Point는 어느 방향에서는 극솟값이지만 다른 방향에서는 극댓값이 되는 지점입니다.',
+      detailedExplanation: 'Saddle Point(안장점)는 기울기가 0이 되어 학습이 멈춘 것처럼 보이지만, 실제로는 최적해가 아닌 지점입니다. 고차원 공간의 딥러닝 최적화 문제에서는 Local Minimum보다 Saddle Point가 더 빈번하게 발생하며 문제가 됩니다.',
+    },
+    {
+      id: 407,
+      text: 'SGD가 "무작위성"을 가지는 것이 학습에 도움이 되는 이유는 무엇인가요?',
+      options: ['계산 정확도를 높여주기 때문에', 'Local Minimum에 빠졌을 때 탈출할 수 있는 기회를 제공하기 때문에', '데이터 전처리가 필요 없게 만들기 때문에', '항상 최단 경로로 이동하기 때문에'],
+      answer: 1,
+      shortExplanation: '미니 배치의 노이즈 덕분에 엉뚱한 방향으로 튀면서 웅덩이를 탈출할 수 있습니다.',
+      detailedExplanation: '전체 배치를 사용할 경우 기울기가 0인 지점에서 멈추면 영원히 탈출할 수 없습니다. 하지만 SGD는 샘플링된 데이터에 따라 기울기가 매번 조금씩 달라지므로(Noise), 우연히 Local Minimum이나 Saddle Point를 벗어날 확률이 생깁니다.',
+    },
+    {
+      id: 408,
+      text: 'Optimizer를 선택할 때 고려해야 할 하이퍼파라미터 중, 학습의 보폭을 결정하는 가장 중요한 값은?',
+      options: ['Learning Rate', 'Batch Size', 'Hidden Layer Count', 'Activation Function'],
+      answer: 0,
+      shortExplanation: 'Learning Rate는 한 번의 업데이트에서 가중치를 얼마나 이동시킬지 결정합니다.',
+      detailedExplanation: 'Learning Rate(학습률)는 Optimizer 수식에서 기울기에 곱해지는 값으로, 매 스텝마다 파라미터를 얼마나 크게 변경할지를 결정합니다. 너무 크면 발산하고, 너무 작으면 학습 속도가 지나치게 느려집니다.'
+    }
+  ]
+};

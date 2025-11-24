@@ -624,7 +624,7 @@ export default function QuizPlatform() {
             <div className="bg-blue-600 text-white p-1.5 rounded-lg">
               <Brain className="w-6 h-6" />
             </div>
-            <span className="text-xl font-bold text-gray-900 dark:text-white">QuizMaster</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">AI Atlas</span>
           </div>
           
           <div className="flex items-center gap-4">
