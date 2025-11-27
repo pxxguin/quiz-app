@@ -1,5 +1,5 @@
 export default {
-  id: 'quiz-ai-007',
+  id: 'quiz-paper-001',
   title: 'The Free Transformer 논문 리뷰',
   description: 'Review with The Free Transformer에 대한 퀴즈입니다. 해당 포스팅을 참고하여 문제를 풀어보세요.',
   author: 'Hong',

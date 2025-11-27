@@ -1,5 +1,5 @@
 export default {
-  id: 'quiz-ai-006',
+  id: 'quiz-ai-005',
   title: 'Optimizer의 종류와 특징',
   description: 'What is optimizer and how they work?에 대한 퀴즈입니다. 해당 포스팅을 참고하여 문제를 풀어보세요.',
   author: 'Hong',
