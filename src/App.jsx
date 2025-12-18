@@ -309,7 +309,7 @@ const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHisto
   const [hoveredData, setHoveredData] = useState(null);
 
   // 🚀 [Store] 장착된 아바타 아이콘 찾기 (StoreView의 STORE_ITEMS 참조)
-  const equippedAvatarId = userProfile?.equipped_avatar || 'avatar_default';
+  const equippedAvatarId = userProfile?.equipped_avatar || 'avatar_gif_3';
   const avatarItem = STORE_ITEMS.find(i => i.id === equippedAvatarId) || STORE_ITEMS[0];
   const AvatarIcon = ICON_MAP[avatarItem.icon] || User;
 
@@ -317,10 +317,16 @@ const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHisto
     <div className="space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-4 mb-6">
-          <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center text-3xl shadow-lg relative bg-white dark:bg-gray-700 ${styles}`}>
-            {/* {icon} -> 아바타로 교체 */}
-            <AvatarIcon className="w-8 h-8 text-gray-700 dark:text-gray-300" />
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center text-sm border-2 border-white shadow-sm" title="Tier Icon">
+          <div className="relative w-16 h-16">
+            <div className={`w-full h-full rounded-full border-4 flex items-center justify-center text-3xl shadow-lg bg-white dark:bg-gray-700 overflow-hidden ${styles}`}>
+              {/* 🚀 [Updated] 이미지 자산 지원 */}
+              {avatarItem.imageSrc ? (
+                <img src={avatarItem.imageSrc} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <AvatarIcon className="w-8 h-8 text-gray-700 dark:text-gray-300" />
+              )}
+            </div>
+            <div className="absolute -bottom-1 -right-1 z-10 w-6 h-6 bg-white rounded-full flex items-center justify-center text-sm border-2 border-white shadow-sm" title="Tier Icon">
               {icon}
             </div>
           </div>
@@ -536,7 +542,7 @@ export default function QuizPlatform() {
         last_login_at: new Date().toISOString(),
         unlocked_items: [],
         equipped_theme: 'theme_blue',
-        equipped_avatar: 'avatar_default'
+        equipped_avatar: 'avatar_gif_3'
       };
       setUserProfile(newProfile);
       localStorage.setItem('quizApp_profile', JSON.stringify(newProfile));

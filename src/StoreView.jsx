@@ -8,16 +8,16 @@ import {
 // ----------------------------------------------------------------------
 // 🛍️ [Data] 상점 아이템 목록
 // ----------------------------------------------------------------------
+
+const BASE_URL = import.meta.env.BASE_URL;
+
 export const STORE_ITEMS = [
-    // --- 아바타 ---
-    { id: 'avatar_default', type: 'avatar', name: '기본 로봇', cost: 0, icon: 'Bot' },
-    { id: 'avatar_ghost', type: 'avatar', name: '유령', cost: 100, icon: 'Ghost' },
-    { id: 'avatar_smile', type: 'avatar', name: '스마일', cost: 200, icon: 'Smile' },
-    { id: 'avatar_zap', type: 'avatar', name: '번개맨', cost: 300, icon: 'Zap' },
-    { id: 'avatar_flame', type: 'avatar', name: '파이어', cost: 500, icon: 'Flame' },
-    { id: 'avatar_star', type: 'avatar', name: '스타', cost: 700, icon: 'Star' },
-    { id: 'avatar_heart', type: 'avatar', name: '러블리', cost: 800, icon: 'Heart' },
-    { id: 'avatar_crown', type: 'avatar', name: '킹왕짱', cost: 1500, icon: 'Crown' },
+    // --- 아바타 (이미지/GIF) ---
+    // --- 아바타 (이미지/GIF) ---
+    { id: 'avatar_gif_3', type: 'avatar', name: '파티 타임', cost: 0, imageSrc: `${BASE_URL}avatars/third_avatar.gif` },
+    { id: 'avatar_gif_1', type: 'avatar', name: '댄싱 머신', cost: 1500, imageSrc: `${BASE_URL}avatars/first_avatar.gif` },
+    { id: 'avatar_gif_2', type: 'avatar', name: '쿨한 등장', cost: 2500, imageSrc: `${BASE_URL}avatars/second_avatar.gif` },
+    { id: 'avatar_gif_4', type: 'avatar', name: '슈퍼 스타', cost: 4500, imageSrc: `${BASE_URL}avatars/fourth_avatar.gif` },
 
     // --- 테마 (색상) ---
     { id: 'theme_blue', type: 'theme', name: '오션 블루', cost: 0, color: 'blue' },
@@ -39,7 +39,7 @@ export default function StoreView({ userProfile, onBuy, onEquip }) {
 
     const unlockedItems = userProfile?.unlocked_items || [];
     const currentXP = userProfile?.total_xp || 0;
-    const equippedAvatar = userProfile?.equipped_avatar || 'avatar_default';
+    const equippedAvatar = userProfile?.equipped_avatar || 'avatar_gif_3';
     const equippedTheme = userProfile?.equipped_theme || 'theme_blue';
 
     const filteredItems = STORE_ITEMS.filter(item => item.type === activeTab);
@@ -93,8 +93,13 @@ export default function StoreView({ userProfile, onBuy, onEquip }) {
 
                             <div className="mb-4">
                                 {item.type === 'avatar' ? (
-                                    <div className={`w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 ${isEquipped ? 'ring-4 ring-blue-100 dark:ring-blue-900' : ''}`}>
-                                        <IconComponent className="w-8 h-8" />
+                                    <div className={`w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 overflow-hidden ${isEquipped ? 'ring-4 ring-blue-100 dark:ring-blue-900' : ''}`}>
+                                        {/* 🚀 [Updated] 이미지 자산 지원 */}
+                                        {item.imageSrc ? (
+                                            <img src={item.imageSrc} alt={item.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <IconComponent className="w-8 h-8" />
+                                        )}
                                     </div>
                                 ) : (
                                     <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-inner bg-gradient-to-br from-${item.color}-400 to-${item.color}-600`}>
