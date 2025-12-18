@@ -1,26 +1,17 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  BookOpen, Brain, CheckCircle, XCircle, ChevronRight, 
-  RefreshCw, Award, Lightbulb, Home, Search, Filter, 
-  Sparkles, Grid, Layers, Check, X, MessageCircle, ChevronDown, 
+import {
+  BookOpen, Brain, CheckCircle, XCircle, ChevronRight,
+  RefreshCw, Award, Lightbulb, Home, Search, Filter,
+  Sparkles, Grid, Layers, Check, X, MessageCircle, ChevronDown,
   Pause, Play, Moon, Sun, Trophy, User, Flame, TrendingUp, Star,
   LogOut, Mail, Lock, LogIn, Coins, BarChart3, AlertCircle, Calendar
 } from 'lucide-react';
 
 // ----------------------------------------------------------------------
-// 🚨 [설정] 로컬 개발용 Supabase 라이브러리 Import
-// 로컬 VS Code에서 실행할 때는 아래 import 문의 주석을 해제하세요!
+// 🚨 [설정] Supabase 제거 및 로컬 스토리지 모드 전환
 // ----------------------------------------------------------------------
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = 'https://sawcthxuizskcufrgopa.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhd2N0aHh1aXpza2N1ZnJnb3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2NDI5NTAsImV4cCI6MjA3OTIxODk1MH0.kjcK-N6nV2XP_gk0F1cGqrfe3Cw-r85MU1PFODws5sI';
-
-// ⚠️ 로컬에서는 아래 createClient 주석을 풀고, 그 밑에 있는 const supabase = null; 을 지우세요.
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// (미리보기 에러 방지용 더미 객체 - 로컬에서는 지우세요!)
-// const supabase = null; 
+// import { createClient } from '@supabase/supabase-js'; 
+// const supabase = null; // Supabase 클라이언트 제거 
 
 
 // --- [데이터] 정적 퀴즈 데이터 ---
@@ -53,20 +44,85 @@ const calculateTier = (xp) => {
   for (let i = 0; i < tiers.length; i++) {
     if (xp >= tiers[i].min) {
       currentTier = tiers[i];
-      nextTier = tiers[i + 1] || { min: 999999 }; 
+      nextTier = tiers[i + 1] || { min: 999999 };
     }
   }
 
   const level = Math.floor(xp / 100) + 1;
 
-  return { 
-    tier: currentTier.name, 
-    styles: currentTier.color, 
+  return {
+    tier: currentTier.name,
+    styles: currentTier.color,
     icon: currentTier.icon,
     level,
-    nextLevelXp: nextTier.min, 
+    nextLevelXp: nextTier.min,
     currentTierMin: currentTier.min
   };
+};
+
+// ----------------------------------------------------------------------
+// 🏅 [Logic] 뱃지 정의 및 계산 시스템
+// ----------------------------------------------------------------------
+const BADGES = [
+  {
+    id: 'first_step',
+    name: '시작이 반이다',
+    description: '첫 번째 퀴즈를 완료하세요.',
+    icon: '🐣',
+    bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+    text: 'text-yellow-600 dark:text-yellow-400',
+    condition: (profile, history) => (profile?.total_solved || 0) >= 1
+  },
+  {
+    id: 'combo_master',
+    name: '작심삼일 극복',
+    description: '3일 연속으로 학습하세요.',
+    icon: '🔥',
+    bg: 'bg-orange-100 dark:bg-orange-900/30',
+    text: 'text-orange-600 dark:text-orange-400',
+    condition: (profile, history) => (profile?.streak || 0) >= 3
+  },
+  {
+    id: 'quiz_explorer',
+    name: '퀴즈 탐험가',
+    description: '퀴즈를 5개 이상 푸세요.',
+    icon: '🧭',
+    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    condition: (profile, history) => (profile?.total_solved || 0) >= 5
+  },
+  {
+    id: 'perfectionist',
+    name: '완벽주의자',
+    description: '한 번의 퀴즈에서 만점을 받으세요.',
+    icon: '💯',
+    bg: 'bg-purple-100 dark:bg-purple-900/30',
+    text: 'text-purple-600 dark:text-purple-400',
+    condition: (profile, history) => history && history.some(h => h.points_earned && h.points_earned > 0) // 단순화: 점수를 획득한 기록이 있으면 달성으로 간주 (상세 로직은 데이터 구조에 따라 고도화 가능)
+  },
+  {
+    id: 'bronze_tier',
+    name: '레벨업의 시작',
+    description: 'Bronze 티어(100 XP)를 달성하세요.',
+    icon: '🥉',
+    bg: 'bg-amber-100 dark:bg-amber-900/30',
+    text: 'text-amber-700 dark:text-amber-400',
+    condition: (profile, history) => (profile?.total_xp || 0) >= 100
+  },
+  {
+    id: 'silver_tier',
+    name: '숙련된 조교',
+    description: 'Silver 티어(300 XP)를 달성하세요.',
+    icon: '🥈',
+    bg: 'bg-slate-100 dark:bg-slate-800',
+    text: 'text-slate-600 dark:text-slate-400',
+    condition: (profile, history) => (profile?.total_xp || 0) >= 300
+  }
+];
+
+const calculateBadges = (userProfile, solvedHistory) => {
+  if (!userProfile) return [];
+  return BADGES.filter(badge => badge.condition(userProfile, solvedHistory)).map(b => b.id);
 };
 
 // ----------------------------------------------------------------------
@@ -127,7 +183,7 @@ const Confetti = () => {
 const AnimatedCounter = ({ end, duration = 1500 }) => {
   const [count, setCount] = useState(0);
   useEffect(() => {
-    let startTime; 
+    let startTime;
     const startValue = 0;
     const step = (timestamp) => {
       if (!startTime) startTime = timestamp;
@@ -140,21 +196,45 @@ const AnimatedCounter = ({ end, duration = 1500 }) => {
   return <span>{count}</span>;
 };
 
-const ConfirmLogoutModal = ({ isOpen, onClose, onConfirm }) => {
+
+
+const BadgeModal = ({ isOpen, onClose, earnedBadgeIds }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 dark:border-gray-700 transform transition-all scale-100">
-        <div className="flex items-center gap-3 mb-4 text-red-600 dark:text-red-400">
-          <AlertCircle className="w-6 h-6" />
-          <h3 className="text-lg font-bold">로그아웃 하시겠습니까?</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold flex items-center gap-2 dark:text-white">
+            <Award className="w-6 h-6 text-yellow-500" />
+            업적 배지 ({earnedBadgeIds.length}/{BADGES.length})
+          </h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
         </div>
-        <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">
-          로그아웃 하시면 현재 풀고 있던 문제의 진행 상황이 저장되지 않을 수 있습니다.
-        </p>
-        <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold transition-colors">취소</button>
-          <button onClick={onConfirm} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 font-bold shadow-lg shadow-red-200 dark:shadow-none transition-colors">로그아웃</button>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {BADGES.map(badge => {
+            const isEarned = earnedBadgeIds.includes(badge.id);
+            return (
+              <div key={badge.id} className={`p-4 rounded-xl border transition-all ${isEarned ? 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 shadow-sm' : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 opacity-60 grayscale'}`}>
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0 ${isEarned ? badge.bg : 'bg-gray-200 dark:bg-gray-700'}`}>
+                    {badge.icon}
+                  </div>
+                  <div>
+                    <h4 className={`font-bold text-sm mb-1 ${isEarned ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {badge.name}
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                      {badge.description}
+                    </p>
+                    {isEarned && <div className="mt-2 text-[10px] font-bold text-blue-500 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> 획득 완료</div>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -164,93 +244,23 @@ const ConfirmLogoutModal = ({ isOpen, onClose, onConfirm }) => {
 // ----------------------------------------------------------------------
 // 🔑 Auth View
 // ----------------------------------------------------------------------
-const AuthView = ({ onLoginSuccess }) => {
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  const handleAuth = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    if (!supabase) {
-      alert("로컬에서 실행하려면 App.jsx 상단의 주석을 해제하세요.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) {
-            if (error.message.includes("already registered")) {
-                alert("이미 가입된 이메일입니다. 로그인해주세요.");
-                setIsSignUp(false);
-                setLoading(false);
-                return;
-            }
-            throw error;
-        }
-        if (data?.user) {
-          await supabase.from('profiles').insert([{ id: data.user.id, email: email, total_xp: 0, total_solved: 0, streak: 1, last_login_at: new Date().toISOString() }]);
-        }
-        alert("가입 성공! 로그인합니다.");
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (!signInError && onLoginSuccess) onLoginSuccess();
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        if (onLoginSuccess) onLoginSuccess();
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="max-w-md mx-auto mt-20 bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 animate-fade-in">
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4"><User className="w-8 h-8 text-blue-600 dark:text-blue-400" /></div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{isSignUp ? '회원가입' : '로그인'}</h2>
-      </div>
-      <form onSubmit={handleAuth} className="space-y-4">
-        <div><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" placeholder="Email" /></div></div>
-        <div><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" placeholder="Password" /></div></div>
-        {error && ( <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg flex items-center gap-2"><XCircle className="w-4 h-4 flex-shrink-0" /> {error}</div>)}
-        <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 shadow-lg flex justify-center items-center gap-2 transition-all disabled:opacity-50">{loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : (isSignUp ? '가입하기' : '로그인하기')}</button>
-      </form>
-      <div className="mt-6 text-center"><button onClick={() => { setIsSignUp(!isSignUp); setError(null); }} className="text-sm text-gray-500 hover:text-blue-600 font-medium transition-colors">{isSignUp ? '이미 계정이 있으신가요? 로그인' : '계정이 없으신가요? 회원가입'}</button></div>
-    </div>
-  );
-};
 
 // ----------------------------------------------------------------------
 // 🌟 사이드바 (왼쪽: 내 정보) - 🚀 [NEW] 차트 업그레이드
 // ----------------------------------------------------------------------
-const SidebarLeft = ({ user, userProfile, onLoginClick, onLogoutConfirm, onViewSolved, totalQuizzesCount, solvedHistory }) => {
-  if (!user) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4"><User className="w-8 h-8 text-gray-400" /></div>
-        <h3 className="font-bold text-gray-900 dark:text-white mb-2">로그인이 필요해요</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">학습 기록을 저장하고 랭킹에 도전하세요!</p>
-        <button onClick={onLoginClick} className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 flex items-center justify-center gap-2 transition-all"><LogIn className="w-4 h-4" /> 로그인 / 가입</button>
-      </div>
-    );
-  }
+const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHistory, earnedBadges, onOpenBadgeModal }) => {
+  // LocalStorage 모드에서는 user 객체 검사를 하지 않습니다.
+  const nickname = userProfile?.nickname || 'Guest';
+
 
   const xp = userProfile?.total_xp || 0;
   const { tier, styles, nextLevelXp, currentTierMin, icon } = calculateTier(xp);
-  
+
   // 티어 내 진행률
   let progress = 0;
   if (nextLevelXp > currentTierMin) {
-      progress = ((xp - currentTierMin) / (nextLevelXp - currentTierMin)) * 100;
+    progress = ((xp - currentTierMin) / (nextLevelXp - currentTierMin)) * 100;
   }
   progress = Math.min(Math.max(progress, 0), 100);
 
@@ -267,12 +277,12 @@ const SidebarLeft = ({ user, userProfile, onLoginClick, onLogoutConfirm, onViewS
     const today = new Date();
     const stats = [];
     let maxVal = 0;
-    
+
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0]; 
-      
+      const dateStr = d.toISOString().split('T')[0];
+
       const count = solvedHistory ? solvedHistory.filter(item => item.solved_at && item.solved_at.startsWith(dateStr)).length : 0;
       if (count > maxVal) maxVal = count;
       stats.push({ day: days[d.getDay()], date: dateStr, count });
@@ -281,14 +291,14 @@ const SidebarLeft = ({ user, userProfile, onLoginClick, onLogoutConfirm, onViewS
   };
 
   const { stats: weeklyStats, maxVal } = generateWeeklyStats();
-  
+
   // SVG 좌표 계산
   const chartHeight = 60;
   const chartWidth = 220;
   const points = weeklyStats.map((s, i) => {
-      const x = (i / (weeklyStats.length - 1)) * chartWidth;
-      const y = chartHeight - (s.count / maxVal) * chartHeight;
-      return `${x},${y}`;
+    const x = (i / (weeklyStats.length - 1)) * chartWidth;
+    const y = chartHeight - (s.count / maxVal) * chartHeight;
+    return `${x},${y}`;
   }).join(' ');
 
   const [hoveredData, setHoveredData] = useState(null);
@@ -298,16 +308,16 @@ const SidebarLeft = ({ user, userProfile, onLoginClick, onLogoutConfirm, onViewS
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-4 mb-6">
           <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center text-3xl shadow-lg ${styles}`}>
-             {icon}
+            {icon}
           </div>
           <div className="overflow-hidden">
-            <h3 className="font-bold text-gray-900 dark:text-white text-lg truncate">{user.email.split('@')[0]}</h3>
+            <h3 className="font-bold text-gray-900 dark:text-white text-lg truncate">{nickname}</h3>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${styles}`}>
               {tier}
             </span>
           </div>
         </div>
-        
+
         <div className="mb-2 flex justify-between text-xs font-bold text-gray-600 dark:text-gray-300">
           <span>{xp} XP</span>
           <span>{nextLevelXp} XP (Next)</span>
@@ -317,112 +327,123 @@ const SidebarLeft = ({ user, userProfile, onLoginClick, onLogoutConfirm, onViewS
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl text-center flex flex-col justify-center">
-            <div className="text-orange-500 mb-1 flex justify-center"><Flame className="w-5 h-5" /></div>
-            <div className="text-xl font-black text-gray-900 dark:text-white">{userProfile?.streak || 0}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">연속 학습</div>
+          <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl text-center flex flex-col justify-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onClick={onOpenBadgeModal}>
+            <div className="text-orange-500 mb-1 flex justify-center gap-1">
+              {earnedBadges.length > 0 ? (
+                <span className="text-xl">{BADGES.find(b => b.id === earnedBadges[earnedBadges.length - 1]).icon}</span>
+              ) : (
+                <Award className="w-5 h-5" />
+              )}
+            </div>
+            <div className="text-xl font-black text-gray-900 dark:text-white">{earnedBadges.length}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">내 뱃지</div>
           </div>
 
           <div onClick={onViewSolved} className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl text-center cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group flex flex-col justify-center items-center relative">
-             <div className="relative w-14 h-14 mb-1">
-                <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="28" cy="28" r={radius} className="stroke-gray-200 dark:stroke-gray-600" strokeWidth="4" fill="transparent" />
-                    <circle cx="28" cy="28" r={radius} className="stroke-blue-500 transition-all duration-1000 ease-out" strokeWidth="4" fill="transparent" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ strokeDashoffset }} />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center"><Trophy className="w-5 h-5 text-blue-500 group-hover:scale-110 transition-transform" /></div>
-             </div>
-             <div className="text-xs font-bold text-gray-900 dark:text-white mb-0.5">{solvedCount} / {totalCount}</div>
-             <div className="text-xs text-gray-500 dark:text-gray-400">푼 퀴즈</div>
+            <div className="relative w-14 h-14 mb-1">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle cx="28" cy="28" r={radius} className="stroke-gray-200 dark:stroke-gray-600" strokeWidth="4" fill="transparent" />
+                <circle cx="28" cy="28" r={radius} className="stroke-blue-500 transition-all duration-1000 ease-out" strokeWidth="4" fill="transparent" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} style={{ strokeDashoffset }} />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center"><Trophy className="w-5 h-5 text-blue-500 group-hover:scale-110 transition-transform" /></div>
+            </div>
+            <div className="text-xs font-bold text-gray-900 dark:text-white mb-0.5">{solvedCount} / {totalCount}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">푼 퀴즈</div>
           </div>
         </div>
 
         {/* 🚀 [NEW] 꺾은선 그래프 */}
         <div className="pt-4 border-t border-gray-100 dark:border-gray-700 relative">
-            <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" /> 최근 7일 학습량
-            </h4>
-            <div className="h-20 w-full relative" onMouseLeave={() => setHoveredData(null)}>
-                <svg className="w-full h-full overflow-visible">
-                    {/* 라인 */}
-                    <polyline 
-                        points={points} 
-                        fill="none" 
-                        stroke="#3b82f6" 
-                        strokeWidth="2" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round"
-                    />
-                    {/* 포인트 (Dots) */}
-                    {weeklyStats.map((s, i) => {
-                        const x = (i / (weeklyStats.length - 1)) * chartWidth;
-                        const y = chartHeight - (s.count / maxVal) * chartHeight;
-                        return (
-                            <circle 
-                                key={i} 
-                                cx={x} cy={y} r="4" 
-                                className={`fill-white stroke-blue-500 stroke-2 cursor-pointer transition-all hover:r-6 ${hoveredData?.index === i ? 'r-6 fill-blue-100' : ''}`}
-                                onMouseEnter={() => setHoveredData({ index: i, x, y, ...s })}
-                            />
-                        );
-                    })}
-                </svg>
-                
-                {/* 툴팁 */}
-                {hoveredData && (
-                    <div 
-                        className="absolute -top-8 bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg transform -translate-x-1/2 transition-all pointer-events-none z-10 whitespace-nowrap"
-                        style={{ left: hoveredData.x }}
-                    >
-                        {hoveredData.date}: {hoveredData.count}문제
-                    </div>
-                )}
-            </div>
-            {/* X축 라벨 */}
-            <div className="flex justify-between mt-2 text-[10px] text-gray-400">
-                {weeklyStats.map((s, i) => <span key={i}>{s.day}</span>)}
-            </div>
+          <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-1">
+            <TrendingUp className="w-3 h-3" /> 최근 7일 학습량
+          </h4>
+          <div className="h-20 w-full relative" onMouseLeave={() => setHoveredData(null)}>
+            <svg className="w-full h-full overflow-visible">
+              {/* 라인 */}
+              <polyline
+                points={points}
+                fill="none"
+                stroke="#3b82f6"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              {/* 포인트 (Dots) */}
+              {weeklyStats.map((s, i) => {
+                const x = (i / (weeklyStats.length - 1)) * chartWidth;
+                const y = chartHeight - (s.count / maxVal) * chartHeight;
+                return (
+                  <circle
+                    key={i}
+                    cx={x} cy={y} r="4"
+                    className={`fill-white stroke-blue-500 stroke-2 cursor-pointer transition-all hover:r-6 ${hoveredData?.index === i ? 'r-6 fill-blue-100' : ''}`}
+                    onMouseEnter={() => setHoveredData({ index: i, x, y, ...s })}
+                  />
+                );
+              })}
+            </svg>
+
+            {/* 툴팁 */}
+            {hoveredData && (
+              <div
+                className="absolute -top-8 bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg transform -translate-x-1/2 transition-all pointer-events-none z-10 whitespace-nowrap"
+                style={{ left: hoveredData.x }}
+              >
+                {hoveredData.date}: {hoveredData.count}문제
+              </div>
+            )}
+          </div>
+          {/* X축 라벨 */}
+          <div className="flex justify-between mt-2 text-[10px] text-gray-400">
+            {weeklyStats.map((s, i) => <span key={i}>{s.day}</span>)}
+          </div>
         </div>
 
-        <button onClick={onLogoutConfirm} className="w-full py-2 mt-4 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center justify-center gap-1"><LogOut className="w-4 h-4" /> 로그아웃</button>
       </div>
     </div>
+
   );
 };
 
 // ----------------------------------------------------------------------
 // 🌟 사이드바 (오른쪽: 랭킹)
 // ----------------------------------------------------------------------
-const SidebarRight = ({ leaderboard }) => {
+const SidebarRight = () => {
+  // 로컬 전용이므로 정적 리더보드 예시를 보여줍니다.
+  const leaderboard = [
+    { email: 'Pxxguin', total_xp: 15300 },
+    { email: 'Habin0223', total_xp: 12400 },
+    { email: 'Doyun22222', total_xp: 8900 },
+    { email: 'Prim2', total_xp: 5200 },
+    { email: 'Supreme', total_xp: 3100 },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Trophy className="w-5 h-5 text-yellow-500" /> 랭킹 (XP순)</h3>
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Trophy className="w-5 h-5 text-yellow-500" /> 명예의 전당</h3>
         <div className="space-y-4">
-          {!leaderboard || leaderboard.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">아직 랭커가 없습니다.</p>
-          ) : (
-            leaderboard.map((user, idx) => {
-              const { tier, styles, icon } = calculateTier(user.total_xp || 0);
-              return (
-                <div key={idx} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${idx === 0 ? 'bg-yellow-500' : idx === 1 ? 'bg-gray-400' : idx === 2 ? 'bg-orange-400' : 'bg-blue-500'}`}>
-                      {idx + 1}
-                    </div>
-                    <div>
-                      <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 truncate w-24">
-                        {user.email ? user.email.split('@')[0] : 'Unknown'}
-                      </span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${styles}`}>
-                        <span>{icon}</span> {tier}
-                      </span>
-                    </div>
+          {leaderboard.map((user, idx) => {
+            const { tier, styles, icon } = calculateTier(user.total_xp || 0);
+            return (
+              <div key={idx} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${idx === 0 ? 'bg-yellow-500' : idx === 1 ? 'bg-gray-400' : idx === 2 ? 'bg-orange-400' : 'bg-blue-500'}`}>
+                    {idx + 1}
                   </div>
-                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{user.total_xp} XP</span>
+                  <div>
+                    <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 truncate w-24">
+                      {user.email}
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${styles}`}>
+                      <span>{icon}</span> {tier}
+                    </span>
+                  </div>
                 </div>
-              );
-            })
-          )}
+                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{user.total_xp} XP</span>
+              </div>
+            );
+          })}
         </div>
       </div>
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -442,14 +463,21 @@ export default function QuizPlatform() {
   const [view, setView] = useState('home');
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [quizzes] = useState(INITIAL_QUIZZES);
-  
-  const [user, setUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null); 
-  const [leaderboard, setLeaderboard] = useState([]); 
-  const [solvedQuizIds, setSolvedQuizIds] = useState([]);
-  const [solvedHistory, setSolvedHistory] = useState([]); 
 
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false); 
+
+  const [userProfile, setUserProfile] = useState(null);
+
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [solvedQuizIds, setSolvedQuizIds] = useState([]);
+  const [solvedHistory, setSolvedHistory] = useState([]);
+
+
+
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
+
+  // 뱃지 계산 (메모이제이션)
+  const earnedBadges = useMemo(() => calculateBadges(userProfile, solvedHistory), [userProfile, solvedHistory]);
 
   // 🌙 [다크 모드] 로직 수정
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -478,122 +506,56 @@ export default function QuizPlatform() {
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
 
-  // 🚀 [DB] 데이터 불러오기
-  const fetchData = async (userId, userEmail) => {
-    if (!userId || !supabase) return;
-
-    try {
-      let { data: profileData } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      
-      if (!profileData) {
-        const { error: insertError } = await supabase.from('profiles').insert([{ 
-          id: userId, 
-          email: userEmail, 
-          total_xp: 0, 
-          total_solved: 0, 
-          streak: 1, 
-          last_login_at: new Date().toISOString() 
-        }]);
-        
-        if (!insertError) {
-           const { data: newProfile } = await supabase.from('profiles').select('*').eq('id', userId).single();
-           profileData = newProfile;
-        }
-      }
-
-      if (profileData) {
-          const lastLogin = profileData.last_login_at ? new Date(profileData.last_login_at) : new Date();
-          const today = new Date();
-          const lastDate = new Date(lastLogin.getFullYear(), lastLogin.getMonth(), lastLogin.getDate());
-          const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          const diffDays = Math.ceil(Math.abs(todayDate - lastDate) / (1000 * 60 * 60 * 24));
-
-          let newStreak = profileData.streak;
-          let needsUpdate = false;
-
-          if (diffDays === 1) { newStreak += 1; needsUpdate = true; } 
-          else if (diffDays > 1) { newStreak = 1; needsUpdate = true; }
-          else if (!profileData.last_login_at) { needsUpdate = true; }
-
-          if (needsUpdate) {
-              await supabase.from('profiles').update({ streak: newStreak, last_login_at: new Date().toISOString() }).eq('id', userId);
-              profileData.streak = newStreak; 
-          }
-          setUserProfile(profileData);
-      }
-
-      const { data: solvedData } = await supabase.from('solved_quizzes').select('quiz_id, solved_at').eq('user_id', userId);
-      if (solvedData) {
-          setSolvedQuizIds(solvedData.map(item => item.quiz_id));
-          setSolvedHistory(solvedData); 
-      }
-
-      const { data: rankData } = await supabase.from('profiles').select('email, total_xp').order('total_xp', { ascending: false }).limit(5);
-      if (rankData) setLeaderboard(rankData);
-
-    } catch (error) {
-      console.error("Fetch Error:", error);
-    }
-  };
-
+  // 🚀 [LocalStorage] 초기화
   useEffect(() => {
-    if (!supabase) return;
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchData(session.user.id, session.user.email);
-      }
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchData(session.user.id, session.user.email);
-      } else {
-        setUser(null);
-        setUserProfile(null);
-        setSolvedQuizIds([]); 
-      }
-    });
-    return () => subscription.unsubscribe();
+    const savedProfile = localStorage.getItem('quizApp_profile');
+    const savedSolved = localStorage.getItem('quizApp_solvedHistory');
+
+    if (savedProfile) {
+      setUserProfile(JSON.parse(savedProfile));
+    } else {
+      // 초기 프로필 생성
+      const newProfile = { nickname: 'Guest', total_xp: 0, total_solved: 0, streak: 1, last_login_at: new Date().toISOString() };
+      setUserProfile(newProfile);
+      localStorage.setItem('quizApp_profile', JSON.stringify(newProfile));
+    }
+
+    if (savedSolved) {
+      const history = JSON.parse(savedSolved);
+      setSolvedHistory(history);
+      setSolvedQuizIds(history.map(h => h.quiz_id));
+    }
   }, []);
 
-  const handleQuizComplete = async (quizId, earnedPoints) => {
-    // 🚀 [수정] 0점이면 저장하지 않음 (오답)
+  const handleQuizComplete = (quizId, earnedPoints) => {
+    // 0점이면 저장하지 않음
     if (earnedPoints === 0) return;
-
-    if (!user || !supabase) {
-      if (!supabase) alert(`[미리보기] 점수 ${earnedPoints}XP 획득! (DB 저장 안됨)`);
-      return;
-    }
-
     if (solvedQuizIds.includes(quizId)) return;
-    
-    const { error: insertError } = await supabase
-      .from('solved_quizzes')
-      .insert({ user_id: user.id, quiz_id: quizId, points_earned: earnedPoints });
 
-    if (!insertError) {
-      const newXp = (userProfile?.total_xp || 0) + earnedPoints;
-      const newTotal = (userProfile?.total_solved || 0) + 1;
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ total_xp: newXp, total_solved: newTotal })
-        .eq('id', user.id);
-      
-      if (!updateError) {
-        setUserProfile(prev => ({ ...prev, total_xp: newXp, total_solved: newTotal }));
-        setSolvedQuizIds(prev => [...prev, quizId]);
-        setSolvedHistory(prev => [...prev, { quiz_id: quizId, solved_at: new Date().toISOString() }]);
-        fetchData(user.id); 
-      }
-    }
+    // 1. 프로필 업데이트
+    const newXp = (userProfile?.total_xp || 0) + earnedPoints;
+    const newTotal = (userProfile?.total_solved || 0) + 1;
+    const newProfile = { ...userProfile, total_xp: newXp, total_solved: newTotal };
+
+    setUserProfile(newProfile);
+    localStorage.setItem('quizApp_profile', JSON.stringify(newProfile));
+
+    // 2. 히스토리 업데이트
+    const newHistoryItem = { quiz_id: quizId, solved_at: new Date().toISOString(), points_earned: earnedPoints };
+    const newHistory = [...solvedHistory, newHistoryItem];
+
+    setSolvedHistory(newHistory);
+    setSolvedQuizIds(prev => [...prev, quizId]);
+    localStorage.setItem('quizApp_solvedHistory', JSON.stringify(newHistory));
   };
 
-  const handleLogoutConfirm = async () => {
-    if (supabase) await supabase.auth.signOut();
-    setView('home');
+
+  const handleLogoutConfirm = () => {
+    // 로컬 스토리지에서는 로그아웃 개념이 없지만, 데이터 초기화를 원한다면 여기서 처리 가능
+    // 현재는 그냥 모달 닫기
     setIsLogoutModalOpen(false);
   };
+
 
   const goHome = () => {
     setView('home');
@@ -612,10 +574,12 @@ export default function QuizPlatform() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300">
-      <ConfirmLogoutModal 
-        isOpen={isLogoutModalOpen} 
-        onClose={() => setIsLogoutModalOpen(false)} 
-        onConfirm={handleLogoutConfirm} 
+
+
+      <BadgeModal
+        isOpen={isBadgeModalOpen}
+        onClose={() => setIsBadgeModalOpen(false)}
+        earnedBadgeIds={earnedBadges}
       />
 
       <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-20 shadow-sm transition-colors duration-300">
@@ -626,32 +590,28 @@ export default function QuizPlatform() {
             </div>
             <span className="text-xl font-bold text-gray-900 dark:text-white">AI Atlas</span>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <button onClick={toggleTheme} className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-yellow-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
               {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-            {!user && view !== 'auth' && (<button onClick={() => setView('auth')} className="lg:hidden bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold">로그인</button>)}
             {view !== 'home' && (<button onClick={goHome} className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"><Home className="w-4 h-4" /><span className="hidden sm:inline">홈으로</span></button>)}
           </div>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {view === 'auth' ? (
-          <AuthView onLoginSuccess={goHome} />
-        ) : view === 'home' ? (
+        {view === 'home' ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <aside className="hidden lg:block lg:col-span-3">
               <div className="sticky top-24">
-                <SidebarLeft 
-                  user={user} 
+                <SidebarLeft
                   userProfile={userProfile}
-                  onLoginClick={() => setView('auth')} 
-                  onLogoutConfirm={() => setIsLogoutModalOpen(true)}
                   onViewSolved={handleViewSolved}
                   totalQuizzesCount={quizzes.length}
-                  solvedHistory={solvedHistory} 
+                  solvedHistory={solvedHistory}
+                  earnedBadges={earnedBadges}
+                  onOpenBadgeModal={() => setIsBadgeModalOpen(true)}
                 />
               </div>
             </aside>
@@ -659,16 +619,16 @@ export default function QuizPlatform() {
               <HomeView quizzes={quizzes} onSelect={startSolve} solvedQuizIds={solvedQuizIds} selectedCategory={currentCategory} setSelectedCategory={setCurrentCategory} />
             </section>
             <aside className="hidden lg:block lg:col-span-3">
-              <div className="sticky top-24"><SidebarRight leaderboard={leaderboard} /></div>
+              <div className="sticky top-24"><SidebarRight /></div>
             </aside>
           </div>
         ) : (
           <div className="max-w-3xl mx-auto">
-            {view === 'solve' && selectedQuiz && 
-              <SolverView 
-                quiz={selectedQuiz} 
-                onBack={goHome} 
-                onComplete={handleQuizComplete} 
+            {view === 'solve' && selectedQuiz &&
+              <SolverView
+                quiz={selectedQuiz}
+                onBack={goHome}
+                onComplete={handleQuizComplete}
               />
             }
           </div>
@@ -683,12 +643,29 @@ function HomeView({ quizzes, onSelect, solvedQuizIds = [], selectedCategory, set
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const slideIntervalRef = useRef(null);
+
+  // 🚀 [Pagination] 상태 추가
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
   const categories = useMemo(() => { const cats = quizzes.map(q => q.category || '기타'); return ['All', ...new Set(cats)]; }, [quizzes]);
   const recentQuizzes = useMemo(() => { return [...quizzes].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 5); }, [quizzes]);
   const carouselItems = useMemo(() => { if (recentQuizzes.length <= 2) return recentQuizzes; return [...recentQuizzes, ...recentQuizzes.slice(0, 2)]; }, [recentQuizzes]);
   useEffect(() => { if (isPaused || recentQuizzes.length <= 2) return; const startInterval = () => { slideIntervalRef.current = setInterval(() => { setCurrentSlide(prev => { const next = prev + 1; return next >= recentQuizzes.length ? 0 : next; }); }, 3000); }; startInterval(); return () => { if (slideIntervalRef.current) clearInterval(slideIntervalRef.current); }; }, [isPaused, recentQuizzes.length]);
   const filteredQuizzes = useMemo(() => { return quizzes.filter(q => { const matchCategory = selectedCategory === 'All' || (selectedCategory === 'Solved' ? solvedQuizIds.includes(q.id) : (q.category || '기타') === selectedCategory); const lowerTerm = searchTerm.toLowerCase(); const matchSearch = q.title.toLowerCase().includes(lowerTerm) || q.description.toLowerCase().includes(lowerTerm) || (q.category || '').toLowerCase().includes(lowerTerm); return matchCategory && matchSearch; }); }, [quizzes, selectedCategory, searchTerm, solvedQuizIds]);
-  
+
+  // 🚀 [Pagination] 필터 변경 시 페이지 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchTerm]);
+
+  // 🚀 [Pagination] 현재 페이지 데이터 계산
+  const totalPages = Math.ceil(filteredQuizzes.length / ITEMS_PER_PAGE);
+  const paginatedQuizzes = filteredQuizzes.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   return (
     <div className="animate-fade-in space-y-8">
       {!searchTerm && selectedCategory === 'All' && recentQuizzes.length > 0 && (
@@ -698,9 +675,11 @@ function HomeView({ quizzes, onSelect, solvedQuizIds = [], selectedCategory, set
             {recentQuizzes.length > 2 && (<div className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">{isPaused ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}{isPaused ? '일시정지' : '자동재생'}</div>)}
           </div>
           <div className="overflow-hidden -mx-2 px-2 py-2"><div className="flex transition-transform duration-700 ease-in-out" style={{ transform: `translateX(-${currentSlide * (window.innerWidth < 640 ? 100 : 50)}%)` }}>
-              {carouselItems.map((quiz, idx) => { const theme = getCategoryTheme(quiz.category); return (
-                  <div key={`${quiz.id}-carousel-${idx}`} className="w-full sm:w-1/2 flex-shrink-0 px-2"><div onClick={() => onSelect(quiz)} className={`bg-gradient-to-br ${theme.gradient} rounded-2xl p-6 text-white cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all relative overflow-hidden h-full flex flex-col justify-between border border-transparent dark:border-white/10`}><div className="relative z-10"><span className="inline-block bg-white/20 backdrop-blur-sm text-xs font-bold px-2 py-1 rounded-lg mb-3 text-white">{quiz.category || 'New'}</span><h3 className="text-xl font-bold mb-2 line-clamp-1">{quiz.title}</h3><p className="text-white/90 text-sm line-clamp-2 mb-4">{quiz.description}</p></div><div className="relative z-10 flex items-center text-xs text-white/80 font-medium mt-2"><span>{quiz.createdAt} 등록</span><span className="mx-2">•</span><span>{quiz.author}</span></div><div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div></div></div>
-                );})}</div></div></section>)}
+            {carouselItems.map((quiz, idx) => {
+              const theme = getCategoryTheme(quiz.category); return (
+                <div key={`${quiz.id}-carousel-${idx}`} className="w-full sm:w-1/2 flex-shrink-0 px-2"><div onClick={() => onSelect(quiz)} className={`bg-gradient-to-br ${theme.gradient} rounded-2xl p-6 text-white cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all relative overflow-hidden h-full flex flex-col justify-between border border-transparent dark:border-white/10`}><div className="relative z-10"><span className="inline-block bg-white/20 backdrop-blur-sm text-xs font-bold px-2 py-1 rounded-lg mb-3 text-white">{quiz.category || 'New'}</span><h3 className="text-xl font-bold mb-2 line-clamp-1">{quiz.title}</h3><p className="text-white/90 text-sm line-clamp-2 mb-4">{quiz.description}</p></div><div className="relative z-10 flex items-center text-xs text-white/80 font-medium mt-2"><span>{quiz.createdAt} 등록</span><span className="mx-2">•</span><span>{quiz.author}</span></div><div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div></div></div>
+              );
+            })}</div></div></section>)}
       <section>
         <div className="flex items-center gap-2 mb-4"><Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" /><h2 className="text-xl font-bold text-gray-900 dark:text-white">퀴즈 탐색</h2></div>
         <div className="relative mb-6"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="제목, 카테고리, 내용을 검색해보세요..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none transition-all" /></div>
@@ -708,8 +687,8 @@ function HomeView({ quizzes, onSelect, solvedQuizIds = [], selectedCategory, set
           <div className="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-1"></div>
           <button onClick={() => setSelectedCategory('Solved')} className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold transition-all ${selectedCategory === 'Solved' ? 'bg-green-600 text-white shadow-md' : 'bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-900 hover:bg-green-50 dark:hover:bg-green-900/20'}`}><CheckCircle className="w-4 h-4" /> 내가 푼 문제</button>
         </div>
-        {filteredQuizzes.length === 0 ? (<div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700"><div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3"><Grid className="w-6 h-6 text-gray-400" /></div><p className="text-gray-500 dark:text-gray-400 font-medium">{searchTerm ? '검색 결과가 없습니다.' : '등록된 퀴즈가 없습니다.'}</p></div>) : (<div className="grid gap-4">{filteredQuizzes.map((quiz, idx) => { 
-          const theme = getCategoryTheme(quiz.category); 
+        {paginatedQuizzes.length === 0 ? (<div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700"><div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3"><Grid className="w-6 h-6 text-gray-400" /></div><p className="text-gray-500 dark:text-gray-400 font-medium">{searchTerm ? '검색 결과가 없습니다.' : '등록된 퀴즈가 없습니다.'}</p></div>) : (<div className="grid gap-4">{paginatedQuizzes.map((quiz, idx) => {
+          const theme = getCategoryTheme(quiz.category);
           const isSolved = solvedQuizIds.includes(quiz.id);
           return (
             <div key={quiz.id || idx} onClick={() => onSelect(quiz)} className={`group bg-white dark:bg-gray-800 p-5 rounded-2xl border ${theme.hoverBorder} hover:shadow-md cursor-pointer transition-all flex items-center justify-between relative overflow-hidden ${isSolved ? 'border-green-200 dark:border-green-900/30 bg-green-50/30 dark:bg-green-900/10' : 'border-gray-200 dark:border-gray-700'}`}>
@@ -723,6 +702,29 @@ function HomeView({ quizzes, onSelect, solvedQuizIds = [], selectedCategory, set
             </div>
           );
         })}</div>)}
+
+        {/* 🚀 [Pagination] 페이지네이션 컨트롤 */}
+        {filteredQuizzes.length > ITEMS_PER_PAGE && (
+          <div className="flex justify-center items-center gap-4 mt-8">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 shadow-sm"
+            >
+              <ChevronDown className="w-5 h-5 rotate-90" />
+            </button>
+            <span className="text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 shadow-sm"
+            >
+              <ChevronDown className="w-5 h-5 -rotate-90" />
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -732,31 +734,31 @@ function HomeView({ quizzes, onSelect, solvedQuizIds = [], selectedCategory, set
 // 🚀 [NEW] SolverView 업데이트 (애니메이션, 점수 조건)
 // ----------------------------------------------------------------------
 function SolverView({ quiz, onBack, onComplete }) {
-  const shuffleQuestions = (questions) => { if (!questions || questions.length === 0) return []; const shuffled = [...questions]; for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; } return shuffled; };
+  const shuffleQuestions = (questions) => { if (!questions || questions.length === 0) return []; const shuffled = [...questions]; for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; } return shuffled; };
   const [shuffledQuestions, setShuffledQuestions] = useState(() => shuffleQuestions(quiz.questions));
   const [currentQIdx, setCurrentQIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isChecked, setIsChecked] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
-  const [userAnswers, setUserAnswers] = useState([]); 
+  const [userAnswers, setUserAnswers] = useState([]);
   const [showAllQuestions, setShowAllQuestions] = useState(false);
-  
+
   // 🚀 [NEW] 원형 그래프 애니메이션 상태
   const [animationProgress, setAnimationProgress] = useState(0);
 
-  useEffect(() => { 
-    if (isFinished && onComplete) { 
-       // 🚀 [NEW] 0점 이상일 때만 저장 (틀린 문제는 다시 풀 수 있게)
-       if (score > 0) {
-         const earnedPoints = Math.round((score / quiz.questions.length) * (quiz.points || 0)); 
-         onComplete(quiz.id, earnedPoints); 
-       }
-       // 애니메이션 시작
-       setTimeout(() => {
-         setAnimationProgress((score / shuffledQuestions.length) * 100);
-       }, 100);
-    } 
+  useEffect(() => {
+    if (isFinished && onComplete) {
+      // 🚀 [NEW] 0점 이상일 때만 저장 (틀린 문제는 다시 풀 수 있게)
+      if (score > 0) {
+        const earnedPoints = Math.round((score / quiz.questions.length) * (quiz.points || 0));
+        onComplete(quiz.id, earnedPoints);
+      }
+      // 애니메이션 시작
+      setTimeout(() => {
+        setAnimationProgress((score / shuffledQuestions.length) * 100);
+      }, 100);
+    }
   }, [isFinished]);
 
   const question = shuffledQuestions[currentQIdx];
@@ -772,61 +774,61 @@ function SolverView({ quiz, onBack, onComplete }) {
     const isFailed = score === 0;
     const percentage = Math.round((score / shuffledQuestions.length) * 100);
     const visibleQuestions = showAllQuestions ? shuffledQuestions : [shuffledQuestions[0]];
-    
+
     // 원형 차트
-    const radius = 40; 
-    const circumference = 2 * Math.PI * radius; 
+    const radius = 40;
+    const circumference = 2 * Math.PI * radius;
     // 애니메이션 상태 사용
     const strokeDashoffset = circumference - (animationProgress / 100) * circumference;
-    
+
     const earnedPoints = Math.round((score / quiz.questions.length) * (quiz.points || 0));
-    
+
     return (
       <div className="max-w-2xl mx-auto animate-fade-in pb-20 relative">
         {percentage >= 60 && <Confetti />}
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden mb-10 text-center relative">
           <div className={`h-48 relative flex items-center justify-center bg-gradient-to-br ${isFailed ? 'from-red-500 to-orange-600' : 'from-blue-600 to-indigo-700 dark:from-blue-800 dark:to-indigo-900'}`}>
             <div className="relative w-32 h-32">
-                <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="64" cy="64" r={radius} className="stroke-white/20" strokeWidth="8" fill="transparent" />
-                    <circle 
-                        cx="64" cy="64" r={radius} 
-                        className="stroke-white transition-all duration-1000 ease-out" 
-                        strokeWidth="8" 
-                        fill="transparent" 
-                        strokeLinecap="round" 
-                        strokeDasharray={circumference} 
-                        strokeDashoffset={strokeDashoffset} 
-                        style={{ strokeDashoffset }} 
-                    />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                    {isFailed ? <XCircle className="w-8 h-8 mb-1"/> : <Trophy className="w-8 h-8 mb-1" />}
-                    {/* 🚀 [NEW] 카운트 업 애니메이션 */}
-                    <span className="text-2xl font-bold flex items-center gap-1">
-                        <AnimatedCounter end={score} duration={1000} /> / {shuffledQuestions.length}
-                    </span>
-                </div>
+              <svg className="w-full h-full transform -rotate-90">
+                <circle cx="64" cy="64" r={radius} className="stroke-white/20" strokeWidth="8" fill="transparent" />
+                <circle
+                  cx="64" cy="64" r={radius}
+                  className="stroke-white transition-all duration-1000 ease-out"
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  style={{ strokeDashoffset }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+                {isFailed ? <XCircle className="w-8 h-8 mb-1" /> : <Trophy className="w-8 h-8 mb-1" />}
+                {/* 🚀 [NEW] 카운트 업 애니메이션 */}
+                <span className="text-2xl font-bold flex items-center gap-1">
+                  <AnimatedCounter end={score} duration={1000} /> / {shuffledQuestions.length}
+                </span>
+              </div>
             </div>
           </div>
           <div className="pt-8 pb-8 px-6">
             <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2">
-                {isFailed ? '아쉽네요 😢' : (percentage === 100 ? '완벽합니다! 🎉' : '훌륭해요! 👍')}
+              {isFailed ? '아쉽네요 😢' : (percentage === 100 ? '완벽합니다! 🎉' : '훌륭해요! 👍')}
             </h2>
             <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm font-medium">{quiz.title}</p>
-            
+
             {isFailed ? (
-                <div className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-full font-bold text-sm">
-                    다시 도전해서 포인트를 획득하세요!
-                </div>
+              <div className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-full font-bold text-sm">
+                다시 도전해서 포인트를 획득하세요!
+              </div>
             ) : (
-                <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full font-bold text-sm">
-                    <Coins className="w-4 h-4" /> +{earnedPoints} XP 획득!
-                </div>
+              <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full font-bold text-sm">
+                <Coins className="w-4 h-4" /> +{earnedPoints} XP 획득!
+              </div>
             )}
           </div>
         </div>
-        <div className="mb-8"><h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2 px-2"><BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" /> 문제 다시보기 & 상세 해설</h3><div className="space-y-8">{visibleQuestions.map((q, idx) => { const myAnswer = userAnswers[idx]; const isCorrect = myAnswer === q.answer; const reviewExplanation = q.detailedExplanation || q.explanation || '해설이 없습니다.'; return (<div key={q.id} className={`bg-white dark:bg-gray-800 rounded-2xl border-2 p-6 ${isCorrect ? 'border-gray-100 dark:border-gray-700' : 'border-red-100 dark:border-red-900/50'}`}><div className="mb-4"><div className="flex gap-3 mb-2"><span className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${isCorrect ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>Q{idx + 1}</span><h4 className="text-lg font-bold text-gray-800 dark:text-gray-100 leading-snug pt-0.5"><RenderContent content={q.text} /></h4></div>{q.image && <img src={q.image} alt="참고 이미지" className="block mt-4 max-w-full h-auto max-h-60 rounded-lg object-contain border border-gray-100 dark:border-gray-700 mx-auto" />}</div><div className="space-y-2 mb-5">{q.options.map((opt, optIdx) => { let style = "p-3 rounded-xl border text-sm font-medium flex justify-between items-center "; if (optIdx === q.answer) style += "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300"; else if (optIdx === myAnswer && !isCorrect) style += "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300"; else style += "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500"; return (<div key={optIdx} className={style}><RenderContent content={opt} />{optIdx === q.answer && <Check className="w-4 h-4 text-green-600 dark:text-green-400"/>}{optIdx === myAnswer && !isCorrect && <X className="w-4 h-4 text-red-600 dark:text-red-400"/>}</div>); })}</div><details className="group bg-gray-50 dark:bg-gray-700/50 rounded-xl overflow-hidden transition-all duration-300 border border-gray-100 dark:border-gray-700"><summary className="flex items-center justify-between p-4 cursor-pointer list-none select-none hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><div className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300"><Lightbulb className="w-5 h-5 text-yellow-500" /><span>해설 확인하기</span></div><ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-300 group-open:rotate-180" /></summary><div className="px-4 pb-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed border-t border-gray-200 dark:border-gray-700 pt-4 bg-white dark:bg-gray-800"><span className="font-bold text-gray-900 dark:text-white block mb-2">상세 해설</span><RenderContent content={reviewExplanation} /></div></details></div>); })}</div>
+        <div className="mb-8"><h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2 px-2"><BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" /> 문제 다시보기 & 상세 해설</h3><div className="space-y-8">{visibleQuestions.map((q, idx) => { const myAnswer = userAnswers[idx]; const isCorrect = myAnswer === q.answer; const reviewExplanation = q.detailedExplanation || q.explanation || '해설이 없습니다.'; return (<div key={q.id} className={`bg-white dark:bg-gray-800 rounded-2xl border-2 p-6 ${isCorrect ? 'border-gray-100 dark:border-gray-700' : 'border-red-100 dark:border-red-900/50'}`}><div className="mb-4"><div className="flex gap-3 mb-2"><span className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${isCorrect ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>Q{idx + 1}</span><h4 className="text-lg font-bold text-gray-800 dark:text-gray-100 leading-snug pt-0.5"><RenderContent content={q.text} /></h4></div>{q.image && <img src={q.image} alt="참고 이미지" className="block mt-4 max-w-full h-auto max-h-60 rounded-lg object-contain border border-gray-100 dark:border-gray-700 mx-auto" />}</div><div className="space-y-2 mb-5">{q.options.map((opt, optIdx) => { let style = "p-3 rounded-xl border text-sm font-medium flex justify-between items-center "; if (optIdx === q.answer) style += "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300"; else if (optIdx === myAnswer && !isCorrect) style += "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300"; else style += "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500"; return (<div key={optIdx} className={style}><RenderContent content={opt} />{optIdx === q.answer && <Check className="w-4 h-4 text-green-600 dark:text-green-400" />}{optIdx === myAnswer && !isCorrect && <X className="w-4 h-4 text-red-600 dark:text-red-400" />}</div>); })}</div><details className="group bg-gray-50 dark:bg-gray-700/50 rounded-xl overflow-hidden transition-all duration-300 border border-gray-100 dark:border-gray-700"><summary className="flex items-center justify-between p-4 cursor-pointer list-none select-none hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"><div className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300"><Lightbulb className="w-5 h-5 text-yellow-500" /><span>해설 확인하기</span></div><ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-300 group-open:rotate-180" /></summary><div className="px-4 pb-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed border-t border-gray-200 dark:border-gray-700 pt-4 bg-white dark:bg-gray-800"><span className="font-bold text-gray-900 dark:text-white block mb-2">상세 해설</span><RenderContent content={reviewExplanation} /></div></details></div>); })}</div>
           {!showAllQuestions && shuffledQuestions.length > 1 && (<button onClick={() => setShowAllQuestions(true)} className="w-full mt-6 py-4 bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl text-gray-500 dark:text-gray-400 font-bold hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-2">나머지 {shuffledQuestions.length - 1}문제 전체 보기 <ChevronDown className="w-5 h-5" /></button>)}
         </div>
         <div className="flex flex-col sm:flex-row gap-3 sticky bottom-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700"><button onClick={handleRetry} className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 flex justify-center items-center gap-2 shadow-md transition-all"><RefreshCw className="w-5 h-5" /> 다시 풀기</button><button onClick={onBack} className="flex-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-center items-center gap-2 transition-all">다른 퀴즈 풀러가기</button></div>
@@ -835,7 +837,7 @@ function SolverView({ quiz, onBack, onComplete }) {
   }
   return (
     <div className="animate-fade-in">
-      <div className="mb-8 flex items-center justify-between"><button onClick={onBack} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-sm font-medium transition-colors flex items-center gap-1">&larr; 나가기</button><div className="flex items-center gap-3"><div className="w-24 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-blue-600 transition-all duration-500" style={{width: `${progress}%`}}></div></div><span className="text-sm font-bold text-blue-600 dark:text-blue-400">{currentQIdx + 1} / {shuffledQuestions.length}</span></div></div>
+      <div className="mb-8 flex items-center justify-between"><button onClick={onBack} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-sm font-medium transition-colors flex items-center gap-1">&larr; 나가기</button><div className="flex items-center gap-3"><div className="w-24 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-blue-600 transition-all duration-500" style={{ width: `${progress}%` }}></div></div><span className="text-sm font-bold text-blue-600 dark:text-blue-400">{currentQIdx + 1} / {shuffledQuestions.length}</span></div></div>
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-8 mb-6">
         {question.context && (<div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-gray-700 dark:text-gray-300 text-sm font-medium border border-gray-100 dark:border-gray-700"><RenderContent content={question.context} /></div>)}
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 leading-relaxed"><span className="mr-2 text-blue-600 dark:text-blue-400">Q.</span><RenderContent content={question.text} /></h2>
