@@ -787,6 +787,7 @@ export default function QuizPlatform() {
                 quizzes={quizzes}
                 onSelect={startSolve}
                 solvedQuizIds={solvedQuizIds}
+                wrongAnswers={wrongAnswers}
                 selectedCategory={currentCategory}
                 setSelectedCategory={setCurrentCategory}
               />
@@ -833,7 +834,7 @@ export default function QuizPlatform() {
   );
 }
 
-function HomeView({ quizzes, onSelect, solvedQuizIds = [], selectedCategory, setSelectedCategory }) {
+function HomeView({ quizzes, onSelect, solvedQuizIds = [], wrongAnswers = {}, selectedCategory, setSelectedCategory }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -885,15 +886,42 @@ function HomeView({ quizzes, onSelect, solvedQuizIds = [], selectedCategory, set
         {paginatedQuizzes.length === 0 ? (<div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700"><div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3"><Grid className="w-6 h-6 text-gray-400" /></div><p className="text-gray-500 dark:text-gray-400 font-medium">{searchTerm ? '검색 결과가 없습니다.' : '등록된 퀴즈가 없습니다.'}</p></div>) : (<div className="grid gap-4">{paginatedQuizzes.map((quiz, idx) => {
           const theme = getCategoryTheme(quiz.category);
           const isSolved = solvedQuizIds.includes(quiz.id);
+          const hasWrongAnswers = wrongAnswers[quiz.id] && wrongAnswers[quiz.id].length > 0;
+          const isIncomplete = isSolved && hasWrongAnswers;
+
+          let borderClass = 'border-gray-200 dark:border-gray-700';
+          let bgClass = 'bg-white dark:bg-gray-800';
+          let icon = <ChevronRight className="w-5 h-5" />;
+          let iconBg = `bg-gray-100 dark:bg-gray-700 ${theme.iconHover} group-hover:text-white text-gray-600 dark:text-gray-400`;
+
+          if (isSolved) {
+            if (isIncomplete) {
+              borderClass = 'border-orange-200 dark:border-orange-900/50';
+              bgClass = 'bg-orange-50/30 dark:bg-orange-900/10';
+              icon = <AlertCircle className="w-5 h-5" />;
+              iconBg = 'bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-400';
+            } else {
+              borderClass = 'border-green-200 dark:border-green-900/30';
+              bgClass = 'bg-green-50/30 dark:bg-green-900/10';
+              icon = <Check className="w-6 h-6" />;
+              iconBg = 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400';
+            }
+          }
+
           return (
-            <div key={quiz.id || idx} onClick={() => onSelect(quiz)} className={`group bg-white dark:bg-gray-800 p-5 rounded-2xl border ${theme.hoverBorder} hover:shadow-md cursor-pointer transition-all flex items-center justify-between relative overflow-hidden ${isSolved ? 'border-green-200 dark:border-green-900/30 bg-green-50/30 dark:bg-green-900/10' : 'border-gray-200 dark:border-gray-700'}`}>
+            <div key={quiz.id || idx} onClick={() => onSelect(quiz)} className={`group p-5 rounded-2xl border ${theme.hoverBorder} hover:shadow-md cursor-pointer transition-all flex items-center justify-between relative overflow-hidden ${borderClass} ${bgClass}`}>
               <div className="flex-1 min-w-0 pr-4 z-10">
-                <div className="flex items-center gap-2 mb-1"><span className={`text-xs font-bold ${theme.badgeText} ${theme.badgeBg} px-2 py-0.5 rounded-md`}>{quiz.category || '기타'}</span><span className="flex items-center gap-1 text-xs font-bold text-yellow-600 dark:text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-md"><Coins className="w-3 h-3" /> {quiz.points || 0} XP</span><span className="text-xs text-gray-400 dark:text-gray-500">•</span><span className="text-xs text-gray-400 dark:text-gray-500">{quiz.createdAt}</span></div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-xs font-bold ${theme.badgeText} ${theme.badgeBg} px-2 py-0.5 rounded-md`}>{quiz.category || '기타'}</span>
+                  <span className="flex items-center gap-1 text-xs font-bold text-yellow-600 dark:text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-md"><Coins className="w-3 h-3" /> {quiz.points || 0} XP</span>
+                  {isIncomplete && <span className="text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/20 px-2 py-0.5 rounded-md flex items-center gap-1"><RefreshCw className="w-3 h-3" /> 복습 필요</span>}
+                  <span className="text-xs text-gray-400 dark:text-gray-500">•</span><span className="text-xs text-gray-400 dark:text-gray-500">{quiz.createdAt}</span>
+                </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{quiz.title}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{quiz.description}</p>
               </div>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors flex-shrink-0 z-10 ${isSolved ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' : `bg-gray-100 dark:bg-gray-700 ${theme.iconHover} group-hover:text-white text-gray-600 dark:text-gray-400`}`}>{isSolved ? <Check className="w-6 h-6" /> : <ChevronRight className="w-5 h-5" />}</div>
-              {isSolved && (<div className="absolute -right-2 -bottom-4 opacity-10 pointer-events-none"><Award className="w-24 h-24 text-green-600" /></div>)}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors flex-shrink-0 z-10 ${iconBg}`}>{icon}</div>
+              {isSolved && !isIncomplete && (<div className="absolute -right-2 -bottom-4 opacity-10 pointer-events-none"><Award className="w-24 h-24 text-green-600" /></div>)}
             </div>
           );
         })}</div>)}
