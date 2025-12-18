@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import StoreView, { STORE_ITEMS } from './StoreView';
 import DashboardView from './DashboardView';
+import ReviewNoteView from './ReviewNoteView';
 import {
   BookOpen, Brain, CheckCircle, XCircle, ChevronRight,
   RefreshCw, Award, Lightbulb, Home, Search, Filter,
@@ -255,7 +256,7 @@ const BadgeModal = ({ isOpen, onClose, earnedBadgeIds }) => {
 
 const ICON_MAP = { Bot, Ghost, Smile, Zap, Crown, Flame, Star, Heart, Shield, Skull, Sun, Moon, Cloud, Umbrella };
 
-const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHistory, earnedBadges, onOpenBadgeModal, onViewStore, onOpenDashboard }) => {
+const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHistory, earnedBadges, onOpenBadgeModal, onViewStore, onOpenDashboard, onOpenReviewNote }) => {
   // LocalStorage 모드에서는 user 객체 검사를 하지 않습니다.
   const nickname = userProfile?.nickname || 'Guest';
 
@@ -384,6 +385,15 @@ const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHisto
           종합 분석 대시보드
         </button>
 
+        {/* 🚀 [NEW] Review Note Button */}
+        <button
+          onClick={onOpenReviewNote}
+          className="w-full mb-6 py-3 rounded-xl bg-white dark:bg-gray-800 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 font-bold text-sm shadow-sm hover:shadow-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center gap-2"
+        >
+          <BookOpen className="w-4 h-4" />
+          오답 노트
+        </button>
+
         {/* 🚀 [NEW] 꺾은선 그래프 */}
         <div className="pt-4 border-t border-gray-100 dark:border-gray-700 relative">
           <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-1">
@@ -502,6 +512,7 @@ export default function QuizPlatform() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [solvedQuizIds, setSolvedQuizIds] = useState([]);
   const [solvedHistory, setSolvedHistory] = useState([]);
+  const [wrongAnswers, setWrongAnswers] = useState({}); // { quizId: [questionId, questionId, ...] }
 
 
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -565,6 +576,11 @@ export default function QuizPlatform() {
       setSolvedHistory(history);
       setSolvedQuizIds(history.map(h => h.quiz_id));
     }
+
+    const savedWrong = localStorage.getItem('quizApp_wrongAnswers');
+    if (savedWrong) {
+      setWrongAnswers(JSON.parse(savedWrong));
+    }
   }, []);
 
   // 🚀 [Store] 아이템 구매 핸들러
@@ -602,12 +618,36 @@ export default function QuizPlatform() {
   };
 
 
-  const handleQuizComplete = (quizId, earnedPoints) => {
-    // 0점이면 저장하지 않음
+  const handleQuizComplete = (quizId, earnedPoints, wrongQuestionIds = []) => {
+    // 1. 오답 노트 업데이트 (항상 수행)
+    const currentWrong = wrongAnswers[quizId] || [];
+    // 기존 오답 + 새로운 오답 (중복 제거)
+    const newWrongList = [...new Set([...currentWrong, ...wrongQuestionIds])];
+
+    // 만약 이번에 맞힌 문제(wrongQuestionIds에 없는 문제)가 있다면 오답 노트에서 제거해야 함
+    // 하지만 SolverView에서 '이번에 틀린 문제'만 보내주므로, 
+    // '이번에 맞힌 문제'를 알기 위해서는 SolverView에서 '이번에 맞힌 문제'도 보내주거나,
+    // 아니면 여기서 로직을 바꿔야 함.
+    // 간단하게: SolverView는 '현재 퀴즈의 모든 틀린 문제 ID'를 보낸다고 가정.
+    // 하지만 재도전(Retry)이 아닌 일반 풀이의 경우, 이전에 틀렸던 걸 맞혔는지 알 수 없음.
+    // 따라서, "오답 노트" 기능은 "틀린 적이 있는 문제"를 쌓는 것이 아니라, "현재 못 풀고 있는 문제"를 남기는 것이 좋음.
+    // 전략: 
+    // 1. 일반 모드: 틀린 문제 추가. (맞힌 문제는 제거하지 않음 - 우연히 맞혔을 수도 있으니까? 아니면 제거? 보통은 제거함)
+    // 2. 오답 노트 모드: 맞히면 제거.
+
+    // 여기서는 단순하게: "이번에 틀린 문제"를 추가하고, "이번에 맞힌 문제"는 제거하는 로직이 필요함.
+    // SolverView에서 passedQuestionIds 도 같이 받자.
+
+    // 일단 MVP: 틀린 문제만 받아서 추가. (제거는 오답 노트에서 다시 풀 때 처리)
+    const updatedWrongAnswers = { ...wrongAnswers, [quizId]: newWrongList };
+    setWrongAnswers(updatedWrongAnswers);
+    localStorage.setItem('quizApp_wrongAnswers', JSON.stringify(updatedWrongAnswers));
+
+    // 0점이면 히스토리 저장하지 않음 (기존 로직 유지)
     if (earnedPoints === 0) return;
     if (solvedQuizIds.includes(quizId)) return;
 
-    // 1. 프로필 업데이트
+    // 2. 프로필 업데이트
     const newXp = (userProfile?.total_xp || 0) + earnedPoints;
     const newTotal = (userProfile?.total_solved || 0) + 1;
     const newProfile = { ...userProfile, total_xp: newXp, total_solved: newTotal };
@@ -615,13 +655,29 @@ export default function QuizPlatform() {
     setUserProfile(newProfile);
     localStorage.setItem('quizApp_profile', JSON.stringify(newProfile));
 
-    // 2. 히스토리 업데이트
+    // 3. 히스토리 업데이트
     const newHistoryItem = { quiz_id: quizId, solved_at: new Date().toISOString(), points_earned: earnedPoints };
     const newHistory = [...solvedHistory, newHistoryItem];
 
     setSolvedHistory(newHistory);
     setSolvedQuizIds(prev => [...prev, quizId]);
     localStorage.setItem('quizApp_solvedHistory', JSON.stringify(newHistory));
+  };
+
+  // 🚀 [NEW] 오답 노트에서 문제 해결 시 호출
+  // 🚀 [NEW] 오답 노트에서 문제 해결 시 호출
+  const handleReviewComplete = (quizId, stillWrongIds) => {
+    // 재도전 퀴즈는 '모든 오답'을 포함하므로, 
+    // 완료 후 여전히 틀린 문제(stillWrongIds)가 새로운 오답 목록이 됩니다.
+
+    const updatedWrongAnswers = { ...wrongAnswers, [quizId]: stillWrongIds };
+
+    if (stillWrongIds.length === 0) {
+      delete updatedWrongAnswers[quizId];
+    }
+
+    setWrongAnswers(updatedWrongAnswers);
+    localStorage.setItem('quizApp_wrongAnswers', JSON.stringify(updatedWrongAnswers));
   };
 
 
@@ -648,6 +704,28 @@ export default function QuizPlatform() {
   const handleViewSolved = () => { setCurrentCategory('Solved'); };
   const handleGoToStore = () => { setView('store'); window.scrollTo(0, 0); }; // SidebarLeft에 전달
   const handleGoToDashboard = () => { setView('dashboard'); window.scrollTo(0, 0); };
+  const handleGoToReviewNote = () => { setView('review'); window.scrollTo(0, 0); };
+
+  // 🚀 [NEW] 오답 노트 다시 풀기
+  const handleRetryWrong = (quizId, wrongIds) => {
+    const originalQuiz = quizzes.find(q => q.id === quizId);
+    if (!originalQuiz) return;
+
+    const wrongQuestions = originalQuiz.questions.filter(q => wrongIds.includes(q.id));
+
+    // 임시 퀴즈 객체 생성
+    const retryQuiz = {
+      ...originalQuiz,
+      id: quizId, // ID 유지 (완료 시 처리를 위해)
+      title: `[오답 복습] ${originalQuiz.title}`,
+      questions: wrongQuestions,
+      isRetry: true // 재시도 플래그
+    };
+
+    setSelectedQuiz(retryQuiz);
+    setView('solve');
+    window.scrollTo(0, 0);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300">
@@ -700,6 +778,7 @@ export default function QuizPlatform() {
                   onOpenBadgeModal={() => setIsBadgeModalOpen(true)}
                   onViewStore={handleGoToStore}
                   onOpenDashboard={handleGoToDashboard}
+                  onOpenReviewNote={handleGoToReviewNote}
                 />
               </div>
             </aside>
@@ -732,11 +811,19 @@ export default function QuizPlatform() {
                 quizzes={quizzes}
               />
             )}
+            {view === 'review' && (
+              <ReviewNoteView
+                userProfile={userProfile}
+                wrongAnswers={wrongAnswers}
+                quizzes={quizzes}
+                onRetry={handleRetryWrong}
+              />
+            )}
             {view === 'solve' && selectedQuiz &&
               <SolverView
                 quiz={selectedQuiz}
                 onBack={goHome}
-                onComplete={handleQuizComplete}
+                onComplete={selectedQuiz.isRetry ? handleReviewComplete : handleQuizComplete}
               />
             }
           </div>
@@ -878,11 +965,15 @@ function SolverView({ quiz, onBack, onComplete }) {
 
   useEffect(() => {
     if (isFinished && onComplete) {
+      // 🚀 [NEW] 틀린 문제 계산
+      const wrongQuestionIds = shuffledQuestions
+        .filter((q, idx) => userAnswers[idx] !== q.answer)
+        .map(q => q.id);
+
       // 🚀 [NEW] 0점 이상일 때만 저장 (틀린 문제는 다시 풀 수 있게)
-      if (score > 0) {
-        const earnedPoints = Math.round((score / quiz.questions.length) * (quiz.points || 0));
-        onComplete(quiz.id, earnedPoints);
-      }
+      // 점수와 상관없이 오답은 저장해야 함
+      const earnedPoints = Math.round((score / quiz.questions.length) * (quiz.points || 0));
+      onComplete(quiz.id, earnedPoints, wrongQuestionIds);
       // 애니메이션 시작
       setTimeout(() => {
         setAnimationProgress((score / shuffledQuestions.length) * 100);
