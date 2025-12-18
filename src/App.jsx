@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import StoreView, { STORE_ITEMS } from './StoreView';
+import DashboardView from './DashboardView';
 import {
   BookOpen, Brain, CheckCircle, XCircle, ChevronRight,
   RefreshCw, Award, Lightbulb, Home, Search, Filter,
@@ -254,7 +255,7 @@ const BadgeModal = ({ isOpen, onClose, earnedBadgeIds }) => {
 
 const ICON_MAP = { Bot, Ghost, Smile, Zap, Crown, Flame, Star, Heart, Shield, Skull, Sun, Moon, Cloud, Umbrella };
 
-const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHistory, earnedBadges, onOpenBadgeModal, onViewStore }) => {
+const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHistory, earnedBadges, onOpenBadgeModal, onViewStore, onOpenDashboard }) => {
   // LocalStorage 모드에서는 user 객체 검사를 하지 않습니다.
   const nickname = userProfile?.nickname || 'Guest';
 
@@ -372,6 +373,17 @@ const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHisto
           </div>
         </div>
 
+
+
+        {/* 🚀 [NEW] Dashboard Button */}
+        <button
+          onClick={onOpenDashboard}
+          className="w-full mb-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm shadow-md hover:shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+        >
+          <BarChart3 className="w-4 h-4" />
+          종합 분석 대시보드
+        </button>
+
         {/* 🚀 [NEW] 꺾은선 그래프 */}
         <div className="pt-4 border-t border-gray-100 dark:border-gray-700 relative">
           <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-1">
@@ -420,7 +432,7 @@ const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHisto
         </div>
 
       </div>
-    </div>
+    </div >
 
   );
 };
@@ -635,6 +647,7 @@ export default function QuizPlatform() {
   const [currentCategory, setCurrentCategory] = useState('All');
   const handleViewSolved = () => { setCurrentCategory('Solved'); };
   const handleGoToStore = () => { setView('store'); window.scrollTo(0, 0); }; // SidebarLeft에 전달
+  const handleGoToDashboard = () => { setView('dashboard'); window.scrollTo(0, 0); };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300">
@@ -686,6 +699,7 @@ export default function QuizPlatform() {
                   earnedBadges={earnedBadges}
                   onOpenBadgeModal={() => setIsBadgeModalOpen(true)}
                   onViewStore={handleGoToStore}
+                  onOpenDashboard={handleGoToDashboard}
                 />
               </div>
             </aside>
@@ -709,6 +723,13 @@ export default function QuizPlatform() {
                 userProfile={userProfile}
                 onBuy={handleBuyItem}
                 onEquip={handleEquipItem}
+              />
+            )}
+            {view === 'dashboard' && (
+              <DashboardView
+                userProfile={userProfile}
+                solvedHistory={solvedHistory}
+                quizzes={quizzes}
               />
             )}
             {view === 'solve' && selectedQuiz &&
