@@ -4,7 +4,7 @@ import {
   RefreshCw, Award, Lightbulb, Home, Search, Filter,
   Sparkles, Grid, Layers, Check, X, MessageCircle, ChevronDown,
   Pause, Play, Moon, Sun, Trophy, User, Flame, TrendingUp, Star,
-  LogOut, Mail, Lock, LogIn, Coins, BarChart3, AlertCircle, Calendar
+  LogOut, Mail, Lock, LogIn, Coins, BarChart3, AlertCircle, Calendar, Clock
 } from 'lucide-react';
 
 // ----------------------------------------------------------------------
@@ -747,6 +747,27 @@ function SolverView({ quiz, onBack, onComplete }) {
   // 🚀 [NEW] 원형 그래프 애니메이션 상태
   const [animationProgress, setAnimationProgress] = useState(0);
 
+  // 🚀 [Time Attack] 타이머 상태 추가
+  const TIMER_DURATION = 15;
+  const [timeLeft, setTimeLeft] = useState(TIMER_DURATION);
+
+  // 🚀 [Time Attack] 타이머 로직
+  useEffect(() => {
+    if (isChecked || isFinished) return;
+
+    if (timeLeft > 0) {
+      const timerId = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
+      return () => clearTimeout(timerId);
+    } else {
+      // 시간 초과 처리
+      setIsChecked(true);
+      // 오답 처리 (선택하지 않음)
+      const newAnswers = [...userAnswers];
+      newAnswers[currentQIdx] = -1; // -1은 '시간 초과/선택 안함' 의미
+      setUserAnswers(newAnswers);
+    }
+  }, [timeLeft, isChecked, isFinished, currentQIdx]);
+
   useEffect(() => {
     if (isFinished && onComplete) {
       // 🚀 [NEW] 0점 이상일 때만 저장 (틀린 문제는 다시 풀 수 있게)
@@ -766,8 +787,8 @@ function SolverView({ quiz, onBack, onComplete }) {
   const currentExplanation = question.shortExplanation || question.explanation;
   const handleSelect = (idx) => { if (isChecked) return; setSelectedOption(idx); };
   const handleSubmit = () => { if (selectedOption === null) return; setIsChecked(true); const newAnswers = [...userAnswers]; newAnswers[currentQIdx] = selectedOption; setUserAnswers(newAnswers); if (selectedOption === question.answer) setScore(s => s + 1); };
-  const handleNext = () => { if (currentQIdx + 1 < shuffledQuestions.length) { setCurrentQIdx(c => c + 1); setSelectedOption(null); setIsChecked(false); } else { setIsFinished(true); } };
-  const handleRetry = () => { setShuffledQuestions(shuffleQuestions(quiz.questions)); setCurrentQIdx(0); setScore(0); setSelectedOption(null); setIsChecked(false); setIsFinished(false); setUserAnswers([]); setShowAllQuestions(false); setAnimationProgress(0); window.scrollTo(0, 0); };
+  const handleNext = () => { if (currentQIdx + 1 < shuffledQuestions.length) { setCurrentQIdx(c => c + 1); setSelectedOption(null); setIsChecked(false); setTimeLeft(TIMER_DURATION); } else { setIsFinished(true); } };
+  const handleRetry = () => { setShuffledQuestions(shuffleQuestions(quiz.questions)); setCurrentQIdx(0); setScore(0); setSelectedOption(null); setIsChecked(false); setIsFinished(false); setUserAnswers([]); setShowAllQuestions(false); setAnimationProgress(0); setTimeLeft(TIMER_DURATION); window.scrollTo(0, 0); };
 
   if (isFinished) {
     // 🚀 [NEW] 점수가 0점이면 '실패' 처리
@@ -838,13 +859,29 @@ function SolverView({ quiz, onBack, onComplete }) {
   return (
     <div className="animate-fade-in">
       <div className="mb-8 flex items-center justify-between"><button onClick={onBack} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-sm font-medium transition-colors flex items-center gap-1">&larr; 나가기</button><div className="flex items-center gap-3"><div className="w-24 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-blue-600 transition-all duration-500" style={{ width: `${progress}%` }}></div></div><span className="text-sm font-bold text-blue-600 dark:text-blue-400">{currentQIdx + 1} / {shuffledQuestions.length}</span></div></div>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-8 mb-6">
-        {question.context && (<div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-gray-700 dark:text-gray-300 text-sm font-medium border border-gray-100 dark:border-gray-700"><RenderContent content={question.context} /></div>)}
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 leading-relaxed"><span className="mr-2 text-blue-600 dark:text-blue-400">Q.</span><RenderContent content={question.text} /></h2>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-8 mb-6 relative overflow-hidden">
+        {/* 🚀 [Time Attack] 타이머바 */}
+        {!isChecked && (
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-gray-100 dark:bg-gray-700">
+            <div
+              className={`h-full transition-all duration-1000 linear ${timeLeft <= 5 ? 'bg-red-500' : 'bg-blue-500'}`}
+              style={{ width: `${(timeLeft / TIMER_DURATION) * 100}%` }}
+            ></div>
+          </div>
+        )}
+
+        {/* 🚀 [Time Attack] 타이머 텍스트 */}
+        <div className="absolute top-4 right-6 font-mono text-xl font-bold flex items-center gap-1">
+          <Clock className={`w-5 h-5 ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-gray-400'}`} />
+          <span className={timeLeft <= 5 ? 'text-red-500' : 'text-gray-500'}>{timeLeft}s</span>
+        </div>
+
+        {question.context && (<div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-gray-700 dark:text-gray-300 text-sm font-medium border border-gray-100 dark:border-gray-700 mt-4"><RenderContent content={question.context} /></div>)}
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 leading-relaxed mt-2"><span className="mr-2 text-blue-600 dark:text-blue-400">Q.</span><RenderContent content={question.text} /></h2>
         {question.image && (<div className="mb-8 flex justify-center"><img src={question.image} alt="문제 이미지" className="max-w-full max-h-80 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 object-contain bg-white" /></div>)}
         <div className="space-y-3">{question.options.map((option, idx) => { let statusClass = "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"; if (selectedOption === idx) statusClass = "border-blue-600 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300"; if (isChecked) { if (idx === question.answer) statusClass = "border-green-500 dark:border-green-600 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-400"; else if (idx === selectedOption) statusClass = "border-red-500 dark:border-red-600 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400"; else statusClass = "border-gray-100 dark:border-gray-700 text-gray-300 dark:text-gray-600 opacity-50"; } return (<button key={idx} onClick={() => handleSelect(idx)} disabled={isChecked} className={`w-full text-left p-4 rounded-xl border-2 transition-all font-medium flex justify-between items-center ${statusClass}`}><RenderContent content={option} />{isChecked && idx === question.answer && <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-500" />}{isChecked && idx === selectedOption && idx !== question.answer && <XCircle className="w-5 h-5 text-red-600 dark:text-red-500" />}</button>); })}</div>
       </div>
-      {!isChecked ? (<button onClick={handleSubmit} disabled={selectedOption === null} className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg ${selectedOption === null ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed shadow-none' : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200'}`}>정답 확인</button>) : (<div className="animate-fade-in-up">{currentExplanation && (<div className={`p-5 rounded-xl mb-6 flex gap-3 ${selectedOption === question.answer ? 'bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800'}`}><MessageCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${selectedOption === question.answer ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} /><div><p className={`font-bold mb-1 ${selectedOption === question.answer ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>{selectedOption === question.answer ? '정답입니다!' : '오답입니다.'}</p><p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed"><RenderContent content={currentExplanation} /></p></div></div>)}<button onClick={handleNext} className="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-4 rounded-xl font-bold text-lg hover:bg-gray-800 dark:hover:bg-gray-100 shadow-lg flex justify-center items-center gap-2">{currentQIdx + 1 < shuffledQuestions.length ? '다음 문제' : '결과 보기'} <ChevronRight className="w-5 h-5" /></button></div>)}
+      {!isChecked ? (<button onClick={handleSubmit} disabled={selectedOption === null} className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg ${selectedOption === null ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed shadow-none' : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200'}`}>정답 확인</button>) : (<div className="animate-fade-in-up">{currentExplanation && (<div className={`p-5 rounded-xl mb-6 flex gap-3 ${selectedOption === question.answer ? 'bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800'}`}><MessageCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${selectedOption === question.answer ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} /><div><p className={`font-bold mb-1 ${selectedOption === question.answer ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>{selectedOption === question.answer ? '정답입니다!' : (selectedOption === null ? '시간 초과!' : '오답입니다.')}</p><p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed"><RenderContent content={currentExplanation} /></p></div></div>)}<button onClick={handleNext} className="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-4 rounded-xl font-bold text-lg hover:bg-gray-800 dark:hover:bg-gray-100 shadow-lg flex justify-center items-center gap-2">{currentQIdx + 1 < shuffledQuestions.length ? '다음 문제' : '결과 보기'} <ChevronRight className="w-5 h-5" /></button></div>)}
     </div>
   );
 }
