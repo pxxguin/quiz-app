@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import StoreView, { STORE_ITEMS } from './StoreView';
 import {
   BookOpen, Brain, CheckCircle, XCircle, ChevronRight,
   RefreshCw, Award, Lightbulb, Home, Search, Filter,
-  Sparkles, Grid, Layers, Check, X, MessageCircle, ChevronDown,
+  Sparkles, Grid, Layers, Check, X, MessageCircle, ChevronDown, Plus,
   Pause, Play, Moon, Sun, Trophy, User, Flame, TrendingUp, Star,
-  LogOut, Mail, Lock, LogIn, Coins, BarChart3, AlertCircle, Calendar, Clock
+  LogOut, Mail, Lock, LogIn, Coins, BarChart3, AlertCircle, Calendar, Clock, ShoppingBag,
+  Bot, Ghost, Smile, Zap, Crown, Heart, Shield, Skull, Cloud, Umbrella
 } from 'lucide-react';
 
 // ----------------------------------------------------------------------
@@ -249,7 +251,10 @@ const BadgeModal = ({ isOpen, onClose, earnedBadgeIds }) => {
 // ----------------------------------------------------------------------
 // 🌟 사이드바 (왼쪽: 내 정보) - 🚀 [NEW] 차트 업그레이드
 // ----------------------------------------------------------------------
-const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHistory, earnedBadges, onOpenBadgeModal }) => {
+
+const ICON_MAP = { Bot, Ghost, Smile, Zap, Crown, Flame, Star, Heart, Shield, Skull, Sun, Moon, Cloud, Umbrella };
+
+const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHistory, earnedBadges, onOpenBadgeModal, onViewStore }) => {
   // LocalStorage 모드에서는 user 객체 검사를 하지 않습니다.
   const nickname = userProfile?.nickname || 'Guest';
 
@@ -303,12 +308,21 @@ const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHisto
 
   const [hoveredData, setHoveredData] = useState(null);
 
+  // 🚀 [Store] 장착된 아바타 아이콘 찾기 (StoreView의 STORE_ITEMS 참조)
+  const equippedAvatarId = userProfile?.equipped_avatar || 'avatar_default';
+  const avatarItem = STORE_ITEMS.find(i => i.id === equippedAvatarId) || STORE_ITEMS[0];
+  const AvatarIcon = ICON_MAP[avatarItem.icon] || User;
+
   return (
     <div className="space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-4 mb-6">
-          <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center text-3xl shadow-lg ${styles}`}>
-            {icon}
+          <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center text-3xl shadow-lg relative bg-white dark:bg-gray-700 ${styles}`}>
+            {/* {icon} -> 아바타로 교체 */}
+            <AvatarIcon className="w-8 h-8 text-gray-700 dark:text-gray-300" />
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center text-sm border-2 border-white shadow-sm" title="Tier Icon">
+              {icon}
+            </div>
           </div>
           <div className="overflow-hidden">
             <h3 className="font-bold text-gray-900 dark:text-white text-lg truncate">{nickname}</h3>
@@ -472,7 +486,6 @@ export default function QuizPlatform() {
   const [solvedHistory, setSolvedHistory] = useState([]);
 
 
-
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
 
@@ -515,7 +528,16 @@ export default function QuizPlatform() {
       setUserProfile(JSON.parse(savedProfile));
     } else {
       // 초기 프로필 생성
-      const newProfile = { nickname: 'Guest', total_xp: 0, total_solved: 0, streak: 1, last_login_at: new Date().toISOString() };
+      const newProfile = {
+        nickname: 'Guest',
+        total_xp: 0,
+        total_solved: 0,
+        streak: 1,
+        last_login_at: new Date().toISOString(),
+        unlocked_items: [],
+        equipped_theme: 'theme_blue',
+        equipped_avatar: 'avatar_default'
+      };
       setUserProfile(newProfile);
       localStorage.setItem('quizApp_profile', JSON.stringify(newProfile));
     }
@@ -526,6 +548,41 @@ export default function QuizPlatform() {
       setSolvedQuizIds(history.map(h => h.quiz_id));
     }
   }, []);
+
+  // 🚀 [Store] 아이템 구매 핸들러
+  const handleBuyItem = (item) => {
+    if (userProfile.total_xp < item.cost) {
+      alert("XP가 부족합니다!");
+      return;
+    }
+
+    const newXp = userProfile.total_xp - item.cost;
+    const newUnlocked = [...(userProfile.unlocked_items || []), item.id];
+
+    // 구매 시 자동 장착 (선택 사항)
+    // const newProfile = { ...userProfile, total_xp: newXp, unlocked_items: newUnlocked, equipped_theme: item.type === 'theme' ? item.id : userProfile.equipped_theme, equipped_avatar: item.type === 'avatar' ? item.id : userProfile.equipped_avatar };
+
+    const newProfile = { ...userProfile, total_xp: newXp, unlocked_items: newUnlocked };
+
+    setUserProfile(newProfile);
+    localStorage.setItem('quizApp_profile', JSON.stringify(newProfile));
+
+    // Confetti effect could be triggered here
+  };
+
+  // 🚀 [Store] 아이템 장착 핸들러
+  const handleEquipItem = (item) => {
+    let newProfile = { ...userProfile };
+    if (item.type === 'avatar') {
+      newProfile.equipped_avatar = item.id;
+    } else if (item.type === 'theme') {
+      newProfile.equipped_theme = item.id;
+    }
+
+    setUserProfile(newProfile);
+    localStorage.setItem('quizApp_profile', JSON.stringify(newProfile));
+  };
+
 
   const handleQuizComplete = (quizId, earnedPoints) => {
     // 0점이면 저장하지 않음
@@ -571,6 +628,7 @@ export default function QuizPlatform() {
 
   const [currentCategory, setCurrentCategory] = useState('All');
   const handleViewSolved = () => { setCurrentCategory('Solved'); };
+  const handleGoToStore = () => { setView('store'); window.scrollTo(0, 0); }; // SidebarLeft에 전달
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300">
@@ -591,7 +649,16 @@ export default function QuizPlatform() {
             <span className="text-xl font-bold text-gray-900 dark:text-white">AI Atlas</span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button
+              onClick={handleGoToStore}
+              className="p-2 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all flex items-center gap-2"
+              title="XP 상점"
+            >
+              <ShoppingBag className="w-5 h-5" />
+              <span className="hidden sm:inline text-sm font-bold">상점</span>
+            </button>
+
             <button onClick={toggleTheme} className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-yellow-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
               {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
@@ -612,18 +679,32 @@ export default function QuizPlatform() {
                   solvedHistory={solvedHistory}
                   earnedBadges={earnedBadges}
                   onOpenBadgeModal={() => setIsBadgeModalOpen(true)}
+                  onViewStore={handleGoToStore}
                 />
               </div>
             </aside>
             <section className="lg:col-span-6">
-              <HomeView quizzes={quizzes} onSelect={startSolve} solvedQuizIds={solvedQuizIds} selectedCategory={currentCategory} setSelectedCategory={setCurrentCategory} />
+              <HomeView
+                quizzes={quizzes}
+                onSelect={startSolve}
+                solvedQuizIds={solvedQuizIds}
+                selectedCategory={currentCategory}
+                setSelectedCategory={setCurrentCategory}
+              />
             </section>
             <aside className="hidden lg:block lg:col-span-3">
               <div className="sticky top-24"><SidebarRight /></div>
             </aside>
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-4xl mx-auto">
+            {view === 'store' && (
+              <StoreView
+                userProfile={userProfile}
+                onBuy={handleBuyItem}
+                onEquip={handleEquipItem}
+              />
+            )}
             {view === 'solve' && selectedQuiz &&
               <SolverView
                 quiz={selectedQuiz}
