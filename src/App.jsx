@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import StoreView, { STORE_ITEMS } from './StoreView';
 import DashboardView from './DashboardView';
 import ReviewNoteView from './ReviewNoteView';
+import CertificateView from './CertificateView';
 import {
   BookOpen, Brain, CheckCircle, XCircle, ChevronRight,
   RefreshCw, Award, Lightbulb, Home, Search, Filter,
@@ -504,6 +505,7 @@ const SidebarRight = () => {
 export default function QuizPlatform() {
   const [view, setView] = useState('home');
   const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const [selectedCertificate, setSelectedCertificate] = useState(null); // { category, date }
   const [quizzes] = useState(INITIAL_QUIZZES);
 
 
@@ -705,6 +707,7 @@ export default function QuizPlatform() {
   const handleGoToStore = () => { setView('store'); window.scrollTo(0, 0); }; // SidebarLeft에 전달
   const handleGoToDashboard = () => { setView('dashboard'); window.scrollTo(0, 0); };
   const handleGoToReviewNote = () => { setView('review'); window.scrollTo(0, 0); };
+  const handleViewCertificate = (cert) => { setSelectedCertificate(cert); setView('certificate'); window.scrollTo(0, 0); };
 
   // 🚀 [NEW] 오답 노트 다시 풀기
   const handleRetryWrong = (quizId, wrongIds) => {
@@ -810,6 +813,7 @@ export default function QuizPlatform() {
                 userProfile={userProfile}
                 solvedHistory={solvedHistory}
                 quizzes={quizzes}
+                onViewCertificate={handleViewCertificate}
               />
             )}
             {view === 'review' && (
@@ -818,6 +822,14 @@ export default function QuizPlatform() {
                 wrongAnswers={wrongAnswers}
                 quizzes={quizzes}
                 onRetry={handleRetryWrong}
+              />
+            )}
+            {view === 'certificate' && selectedCertificate && (
+              <CertificateView
+                userProfile={userProfile}
+                category={selectedCertificate.category}
+                date={selectedCertificate.date}
+                onBack={handleGoToDashboard}
               />
             )}
             {view === 'solve' && selectedQuiz &&
