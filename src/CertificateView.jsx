@@ -2,9 +2,18 @@ import React, { useRef, useState } from 'react';
 import { Award, Download, ArrowLeft, CheckCircle, Loader2, ShieldCheck } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
-export default function CertificateView({ userProfile, category, date, onBack }) {
+export default function CertificateView({ userProfile, category, date, onBack, onUpdateNickname }) {
     const certificateRef = useRef(null);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editName, setEditName] = useState(userProfile?.nickname || 'Guest User');
+
+    const handleSaveNickname = () => {
+        if (editName.trim()) {
+            onUpdateNickname(editName);
+            setIsEditing(false);
+        }
+    };
 
     const handleDownload = async () => {
         if (!certificateRef.current) return;
@@ -78,9 +87,32 @@ export default function CertificateView({ userProfile, category, date, onBack })
                         This acknowledges that
                     </p>
 
-                    <h2 className="text-5xl md:text-7xl font-bold text-gray-900 font-serif tracking-tight">
-                        {userProfile?.nickname || 'Guest User'}
-                    </h2>
+                    <div className="relative group">
+                        {isEditing ? (
+                            <div className="flex items-center gap-2 mb-8">
+                                <input
+                                    type="text"
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    className="text-4xl md:text-6xl font-bold text-gray-900 font-serif text-center border-b-2 border-blue-500 focus:outline-none bg-transparent w-full max-w-md"
+                                    autoFocus
+                                />
+                                <button onClick={handleSaveNickname} className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors shadow-md print:hidden">
+                                    <CheckCircle className="w-6 h-6" />
+                                </button>
+                                <button onClick={() => setIsEditing(false)} className="p-2 bg-gray-200 text-gray-600 rounded-full hover:bg-gray-300 transition-colors shadow-md print:hidden">
+                                    <ArrowLeft className="w-6 h-6" />
+                                </button>
+                            </div>
+                        ) : (
+                            <h2 className="text-5xl md:text-7xl font-bold text-gray-900 font-serif tracking-tight mb-8 relative inline-block cursor-pointer hover:text-blue-600 transition-colors" onClick={() => { setIsEditing(true); setEditName(userProfile?.nickname || ''); }} title="클릭하여 이름 수정">
+                                {userProfile?.nickname || 'Guest User'}
+                                <span className="absolute -right-8 top-0 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500 print:hidden">
+                                    <Award className="w-6 h-6" />
+                                </span>
+                            </h2>
+                        )}
+                    </div>
 
                     <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
                         has successfully completed all the requirements to be recognized as a

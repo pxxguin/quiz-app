@@ -257,9 +257,18 @@ const BadgeModal = ({ isOpen, onClose, earnedBadgeIds }) => {
 
 const ICON_MAP = { Bot, Ghost, Smile, Zap, Crown, Flame, Star, Heart, Shield, Skull, Sun, Moon, Cloud, Umbrella };
 
-const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHistory, earnedBadges, onOpenBadgeModal, onViewStore, onOpenDashboard, onOpenReviewNote }) => {
+const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHistory, earnedBadges, onOpenBadgeModal, onViewStore, onOpenDashboard, onOpenReviewNote, onUpdateNickname }) => {
   // LocalStorage 모드에서는 user 객체 검사를 하지 않습니다.
   const nickname = userProfile?.nickname || 'Guest';
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(nickname);
+
+  const handleSave = () => {
+    if (editName.trim()) {
+      onUpdateNickname(editName.trim());
+      setIsEditing(false);
+    }
+  };
 
 
   const xp = userProfile?.total_xp || 0;
@@ -334,7 +343,32 @@ const SidebarLeft = ({ userProfile, onViewSolved, totalQuizzesCount, solvedHisto
             </div>
           </div>
           <div className="overflow-hidden">
-            <h3 className="font-bold text-gray-900 dark:text-white text-lg truncate">{nickname}</h3>
+            {/* 🚀 [Nickname] 이름 수정 기능 추가 (Inline Edit) */}
+            <div className="group relative min-h-[28px] flex items-center">
+              {isEditing ? (
+                <div className="flex items-center gap-1 w-full">
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full text-sm font-bold text-gray-900 dark:text-white bg-transparent border-b-2 border-blue-500 focus:outline-none px-1 py-0.5"
+                    autoFocus
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); else if (e.key === 'Escape') setIsEditing(false); }}
+                  />
+                  <button onClick={handleSave} className="text-blue-500 hover:text-blue-600"><CheckCircle className="w-4 h-4" /></button>
+                  <button onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-gray-500"><XCircle className="w-4 h-4" /></button>
+                </div>
+              ) : (
+                <h3
+                  className="font-bold text-gray-900 dark:text-white text-lg truncate cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1 w-full"
+                  onClick={() => { setIsEditing(true); setEditName(nickname); }}
+                  title="클릭하여 이름 수정"
+                >
+                  {nickname}
+                  <span className="opacity-0 group-hover:opacity-100 text-xs text-blue-500 transition-opacity">✏️</span>
+                </h3>
+              )}
+            </div>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${styles}`}>
               {tier}
             </span>
@@ -599,11 +633,16 @@ export default function QuizPlatform() {
     // const newProfile = { ...userProfile, total_xp: newXp, unlocked_items: newUnlocked, equipped_theme: item.type === 'theme' ? item.id : userProfile.equipped_theme, equipped_avatar: item.type === 'avatar' ? item.id : userProfile.equipped_avatar };
 
     const newProfile = { ...userProfile, total_xp: newXp, unlocked_items: newUnlocked };
-
     setUserProfile(newProfile);
     localStorage.setItem('quizApp_profile', JSON.stringify(newProfile));
+    alert(`${item.name}을(를) 구매했습니다!`);
+  };
 
-    // Confetti effect could be triggered here
+  // 🚀 [Nickname] 닉네임 변경 핸들러
+  const handleUpdateNickname = (newNickname) => {
+    const updatedProfile = { ...userProfile, nickname: newNickname };
+    setUserProfile(updatedProfile);
+    localStorage.setItem('quizApp_profile', JSON.stringify(updatedProfile));
   };
 
   // 🚀 [Store] 아이템 장착 핸들러
@@ -782,6 +821,7 @@ export default function QuizPlatform() {
                   onViewStore={handleGoToStore}
                   onOpenDashboard={handleGoToDashboard}
                   onOpenReviewNote={handleGoToReviewNote}
+                  onUpdateNickname={handleUpdateNickname}
                 />
               </div>
             </aside>
@@ -793,6 +833,8 @@ export default function QuizPlatform() {
                 wrongAnswers={wrongAnswers}
                 selectedCategory={currentCategory}
                 setSelectedCategory={setCurrentCategory}
+                userProfile={userProfile}
+                onUpdateNickname={handleUpdateNickname}
               />
             </section>
             <aside className="hidden lg:block lg:col-span-3">
@@ -830,6 +872,7 @@ export default function QuizPlatform() {
                 category={selectedCertificate.category}
                 date={selectedCertificate.date}
                 onBack={handleGoToDashboard}
+                onUpdateNickname={handleUpdateNickname}
               />
             )}
             {view === 'solve' && selectedQuiz &&
@@ -846,11 +889,22 @@ export default function QuizPlatform() {
   );
 }
 
-function HomeView({ quizzes, onSelect, solvedQuizIds = [], wrongAnswers = {}, selectedCategory, setSelectedCategory }) {
+function HomeView({ quizzes, onSelect, solvedQuizIds = [], wrongAnswers = {}, selectedCategory, setSelectedCategory, userProfile, onUpdateNickname }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const slideIntervalRef = useRef(null);
+
+  // 🚀 [Nickname] Mobile Inline Edit State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(userProfile?.nickname || 'Guest');
+
+  const handleSaveName = () => {
+    if (editName.trim()) {
+      onUpdateNickname(editName.trim());
+      setIsEditing(false);
+    }
+  };
 
   // 🚀 [Pagination] 상태 추가
   const [currentPage, setCurrentPage] = useState(1);
@@ -876,6 +930,38 @@ function HomeView({ quizzes, onSelect, solvedQuizIds = [], wrongAnswers = {}, se
 
   return (
     <div className="animate-fade-in space-y-8">
+      {/* 🚀 [Mobile] 모바일용 프로필/인사 섹션 (SidebarLeft가 숨겨질 때 보임) */}
+      <div className="lg:hidden bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">반가워요,</p>
+          {isEditing ? (
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="text-xl font-bold text-gray-900 dark:text-white bg-transparent border-b-2 border-blue-500 focus:outline-none w-32"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); else if (e.key === 'Escape') setIsEditing(false); }}
+              />
+              <button onClick={handleSaveName} className="p-1 bg-blue-100 text-blue-600 rounded-full"><CheckCircle className="w-5 h-5" /></button>
+              <button onClick={() => setIsEditing(false)} className="p-1 bg-gray-100 text-gray-500 rounded-full"><XCircle className="w-5 h-5" /></button>
+            </div>
+          ) : (
+            <h2
+              className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2 cursor-pointer group"
+              onClick={() => { setIsEditing(true); setEditName(userProfile?.nickname || 'Guest'); }}
+            >
+              {userProfile?.nickname || 'Guest'} <span className="text-sm text-blue-500 opacity-50 group-hover:opacity-100 transition-opacity">✏️</span>
+            </h2>
+          )}
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-gray-500 dark:text-gray-400">Total XP</div>
+          <div className="text-xl font-black text-blue-600 dark:text-blue-400">{userProfile?.total_xp || 0} XP</div>
+        </div>
+      </div>
+
       {!searchTerm && selectedCategory === 'All' && recentQuizzes.length > 0 && (
         <section onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} className="relative">
           <div className="flex items-center justify-between mb-4">
